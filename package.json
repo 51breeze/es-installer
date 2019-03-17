@@ -1,0 +1,40 @@
+{
+  "name": "easescript-installer",
+  "version": "0.0.1",
+  "description": "easescript installer",
+  "main": "./index.js",
+  "bin": {
+    "ei": "./bin/installer.js",
+    "easescript-installer": "./bin/installer.js"
+  },
+  "scripts": {
+    "test": "node ./bin/installer.js -V",
+    "installer": "node ./bin/installer.js",
+    "create": "node ./bin/installer.js create"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/51breeze/easescript-installer.git"
+  },
+  "keywords": [
+    "easescript installer"
+  ],
+  "author": "Jun Ye",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/51breeze/easescript-installer/issues"
+  },
+  "homepage": "https://github.com/51breeze/easescript-installer#readme",
+  "dependencies": {
+    "commander": "^2.11.0",
+    "extend": "^1.3.0",
+    "inquirer": "^6.2.2",
+    "colors": "^1.1.2"
+  },
+  "devDependencies": {
+    "commander": "^2.11.0",
+    "extend": "^1.3.0",
+    "inquirer": "^6.2.2",
+    "colors": "^1.1.2"
+  }
+}
