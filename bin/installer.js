@@ -2,6 +2,7 @@
 const program = require('commander');
 const PATH = require('path');
 const create = require('../index.js');
+const utils = require('./utils.js');
 const inquirer =  require('inquirer');
 const {spawn} = require('child_process');
 
@@ -12,6 +13,10 @@ if( process.env && process.env.npm_config_argv )
     if( config_args && config_args.original instanceof Array )
     {
         args = config_args.original;
+        if( args[1] ==="init" || args[1] ==="create" )
+        {
+            args.push( "--"+args[1] );
+        }
     }
 }
 
@@ -79,6 +84,7 @@ program
 //.option('--gh, --global-handle [variable name]', '全局引用EaseScript对象的变量名','EaseScript')
 .option('--src, --source-file [enable|disabled]', '是否需要生成源文件','enable')
 .option('--create', '手动创建项目')
+.option('--init', '命令创建项目')
 .option('--sps, --service-provider-syntax [php]', '服务提供者的语法');
 program.parse( args );
 
@@ -113,6 +119,7 @@ var mapKeys={
     "clean":"clean",
     "syntax":"syntax",
     "create":"create",
+    "init":"init",
 }
 
 //全局配置
@@ -140,16 +147,16 @@ for( var key in mapKeys )
     }
 }
 
-
 //手动创建项目
 if( config.create )
 {
+    delete config.create;
     create( config );
-
 }
 //交互式创建项目
-else
+else if( config.init )
 {
+    delete config.init;
     const questions = [
         {
             type: 'input',
@@ -202,4 +209,8 @@ else
             spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['install'], {cwd:config.project_path,stdio: 'inherit'})
         }
     });
+
+}else{
+
+    utils.error( "Optional create or init is not specified." );
 }
