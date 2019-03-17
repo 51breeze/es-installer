@@ -180,7 +180,7 @@ const package={
     "devDependencies":{
       "uglify-js": "^3.1.1",
       "commander": "^2.11.0",
-      "easescript":">=1.1.12-Beta",
+      "easescript":"1.1.14-beta",
       "less": "^2.7.2",
       "colors": "^1.1.2",
       "libxmljs": "^0.18.6"
