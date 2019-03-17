@@ -3,19 +3,6 @@ const PATH = require('path');
 const Utils = require('./bin/utils.js');
 const extend =  require('extend');
 
-//需要保护的关键字
-const reserved=['let', 'of','System',"Context"];
-
-//编译器的上下文对象
-const compileContext={
-    "public":"_public",
-    "protected":"_protected",
-    "private":"_private",
-    "internal":"_internal",
-    "defineModuleMethod":"define",
-    "package":"Context",
-};
-
 //全局配置
 const defaultConfig = {
     //需要编译文件的后缀
@@ -90,6 +77,8 @@ const defaultConfig = {
     'clean':false,
     //1 标准模式（开发时使用） 2 性能模式（生产环境使用）
     'mode': 1, 
+    //是否只构建application应用入口的文件
+    'build_mode':"app",
 };
 
 //构建目录配置
@@ -180,12 +169,18 @@ const buildConfig = {
 //安装包依赖
 const package={
     "name": "Test",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "description": "Test",
+    "scripts": {
+        "version": "node ./node_modules/easescript/bin/es.js -V",
+        "dev": "node ./node_modules/easescript/bin/es.js -M dev",
+        "test": "node ./node_modules/easescript/bin/es.js -M test",
+        "build": "node ./node_modules/easescript/bin/es.js -M production"
+    },
     "devDependencies":{
       "uglify-js": "^3.1.1",
       "commander": "^2.11.0",
-      "easescript":"^1.0.0",
+      "easescript":">=1.1.12-Beta",
       "less": "^2.7.2",
       "colors": "^1.1.2",
       "libxmljs": "^0.18.6"
@@ -396,6 +391,7 @@ function create(config)
        delete packageinfo.devDependencies.libxmljs;
     }
 
+    //config
     Utils.setContents( PATH.join(config.project_path, "package.json"), configToJson( package , 1 ) );
     Utils.info('Project create done, path:'+config.project.path+".");
     if( !config.auto_installer )
