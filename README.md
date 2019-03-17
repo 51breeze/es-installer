@@ -1,10 +1,9 @@
 # EaseScript Installer
 
-## EaseScript 致力于改变web的开发方式，减少重复的开发成本。
+## 使用 EaseScript Installer 来创建一个 easescript 工程。
 
 ### 安装
-```
-npm install easescript-installer
 
-```
-使用 EaseScript Installer 来创建一个 easescript 工程。
+npm install easescript-installer -g
+
+安装成功后，使用 ei 按提示输入参数即可。
