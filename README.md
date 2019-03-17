@@ -7,12 +7,16 @@
 #全局安装
 npm install easescript-installer -g
 
-安装成功后，使用 ei 按提示输入参数即可。
+全局引用 easescript-installer, ei
 
-也可以使用 ei create 来手动指定自定义的参数来创建一个项目。
+交互式创建项目
+ei 按提示输入参数即可
+
+手动创建项目
+ei create -p MyProject
 
 #非全局安装
 
 npm install easescript-installer
 
-安装成功后，使用 npm run installer 按提示输入参数即可。
+使用命令 npm run installer 按提示输入参数即可
