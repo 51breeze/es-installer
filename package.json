@@ -1,6 +1,6 @@
 {
   "name": "easescript-installer",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "easescript installer",
   "main": "./index.js",
   "bin": {
@@ -8,9 +8,8 @@
     "easescript-installer": "./bin/installer.js"
   },
   "scripts": {
-    "test": "node ./bin/installer.js -V",
-    "init": "node ./bin/installer.js --init",
-    "create": "node ./bin/installer.js --create"
+    "version": "node ./bin/installer.js -V",
+    "init": "node ./bin/installer.js"
   },
   "repository": {
     "type": "git",
@@ -26,10 +25,11 @@
   },
   "homepage": "https://github.com/51breeze/easescript-installer#readme",
   "dependencies": {
+    "colors": "^1.1.2",
     "commander": "^2.11.0",
+    "easescript": "1.1.14-beta",
     "extend": ">=2.0.2",
-    "inquirer": "^6.2.2",
-    "colors": "^1.1.2"
+    "inquirer": "^6.2.2"
   },
   "devDependencies": {
     "commander": "^2.11.0",

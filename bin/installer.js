@@ -1,24 +1,12 @@
 #!/usr/bin/env node  
 const program = require('commander');
 const PATH = require('path');
+const fs = require('fs');
 const create = require('../index.js');
 const utils = require('./utils.js');
 const inquirer =  require('inquirer');
+const extend =  require('extend');
 const {spawn} = require('child_process');
-
-var args = process.argv;
-if( process.env && process.env.npm_config_argv )
-{
-    var config_args = JSON.parse(process.env.npm_config_argv);
-    if( config_args && config_args.original instanceof Array )
-    {
-        args = config_args.original;
-        if( args[1] ==="init" || args[1] ==="create" )
-        {
-            args.push( "--"+args[1] );
-        }
-    }
-}
 
 //当前命令脚本路径
 var cmd = PATH.dirname( process.argv[1] );
@@ -83,10 +71,8 @@ program
 .option('--sfs, --skin-file-suffix [value]', '皮肤文件的后缀','.html')
 //.option('--gh, --global-handle [variable name]', '全局引用EaseScript对象的变量名','EaseScript')
 .option('--src, --source-file [enable|disabled]', '是否需要生成源文件','enable')
-.option('--create', '手动创建项目')
-.option('--init', '命令创建项目')
+.option('--bm, --build-mode [app|other]', '构建文件模式', "app")
 .option('--sps, --service-provider-syntax [php]', '服务提供者的语法');
-program.parse( args );
 
 var mapKeys={
     "suffix":"suffix",
@@ -120,97 +106,111 @@ var mapKeys={
     "syntax":"syntax",
     "create":"create",
     "init":"init",
+    "build_mode":"buildMode",
 }
 
-//全局配置
-var config = {};
-for( var key in mapKeys )
+const questions = [
 {
-    var name = mapKeys[ key ];
-    var val =  program[ name ];
-    if(  typeof val !== "undefined" )
+    type: 'input',
+    message: '项目名:',
+    name: 'project_path',
+    default: "./project"
+},
+{
+    type: 'input',
+    message: '描述:',
+    name: 'description',
+},
+{
+    type: 'author',
+    message: '作者:',
+    name: 'author',
+},
+{
+    type: 'input',
+    message: '构建路径:',
+    name: 'build_path',
+    default: "./build"
+},
+{
+    type: 'confirm',
+    message: '是否支持皮肤:',
+    name: 'supportSkin'
+},
+{
+    type: 'list',
+    message: '运行环境:',
+    name: 'syntax',
+    choices: [
+        "javascript",
+        "php",
+    ]
+},
+{
+    type: 'input',
+    message: '构建参数:',
+    name: 'params'
+},
+{
+    type: 'confirm',
+    message: '是否立即安装',
+    name: 'auto_installer'
+}
+];
+
+inquirer.prompt(questions).then(function(answers)
+{
+    var config = {};
+    if( answers.params )
     {
-        switch( name ){
-            case "syntax" :
-                val =  val.toLowerCase();
-            break;
-            case "mode" :
-                val =  val=='dev' ? 1 : val=='test' ? 2 : 3;
-            break;
-            case "strictType" :
-            case "animate" :
-            case "font" :
-                val = val === 'enable';
-            break;
+        program.parse( ["",""].concat( answers.params.split(" ") ) );
+        for( var key in mapKeys )
+        {
+            var name = mapKeys[ key ];
+            var val =  program[ name ];
+            if(  typeof val !== "undefined" )
+            {
+                switch( name ){
+                    case "syntax" :
+                        val =  val.toLowerCase();
+                    break;
+                    case "mode" :
+                        val =  val=='dev' ? 1 : val=='test' ? 2 : 3;
+                    break;
+                    case "strictType" :
+                    case "animate" :
+                    case "font" :
+                        val = val === 'enable';
+                    break;
+                }
+                config[ key ] = val;
+            }
         }
-        config[ key ] = val;
     }
-}
 
-//手动创建项目
-if( config.create )
-{
-    delete config.create;
-    create( config );
-}
-//交互式创建项目
-else if( config.init )
-{
-    delete config.init;
-    const questions = [
-        {
-            type: 'input',
-            message: '项目名:',
-            name: 'project_path',
-            default: "./project"
-        },
-        {
-            type: 'input',
-            message: '描述:',
-            name: 'description',
-        },
-        {
-            type: 'author',
-            message: '作者:',
-            name: 'author',
-        },
-        {
-            type: 'input',
-            message: '构建路径:',
-            name: 'build_path',
-            default: "./build"
-        },
-        {
-            type: 'confirm',
-            message: '是否支持皮肤:',
-            name: 'supportSkin'
-        },
-        {
-            type: 'list',
-            message: '运行环境:',
-            name: 'syntax',
-            choices: [
-                "javascript",
-                "php",
-            ]
-        },
-        {
-            type: 'confirm',
-            message: '是否立即安装',
-            name: 'auto_installer'
-        }
-    ];
+    var installer = answers.auto_installer;
+    delete answers.auto_installer;
+    delete answers.params;
 
-    inquirer.prompt(questions).then(function(answers)
+    var config = create( extend(config, answers) );
+    if( installer )
     {
-        var config = create( answers );
-        if( answers.auto_installer )
+        let child = spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['install'], {cwd:config.project_path,stdio: 'inherit'});
+        child.on("close",function()
         {
-            spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['install'], {cwd:config.project_path,stdio: 'inherit'})
-        }
-    });
-
-}else{
-
-    utils.error( "Optional create or init is not specified." );
-}
+            let es = PATH.join(config.project_path,"node_modules/easescript/bin/es.js");
+            if( fs.existsSync(es) )
+            {
+                let path =`%~dp0${PATH.sep}node_modules${PATH.sep}easescript${PATH.sep}bin${PATH.sep}es.js`;
+                let cmd=`@IF EXIST "%~dp0${PATH.sep}node.exe" (
+                "%~dp0${PATH.sep}node.exe"  "${path}" %*
+                ) ELSE (
+                @SETLOCAL
+                @SET PATHEXT=%PATHEXT:;.JS;=;%
+                node  "${path}" %*
+                )`;
+                utils.setContents( PATH.join(config.project_path, "es.cmd"), cmd );
+            }
+        });
+    }
+});
