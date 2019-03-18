@@ -313,6 +313,23 @@ function getConfigure(config)
     buildProject(config.build, config.project_path );
     config.build_path = config.build.path;
 
+    //工作空间目录
+    if( config.workspace )
+    {
+        if( !PATH.isAbsolute(config.workspace) )
+        {
+            config.workspace = PATH.join(project_path, config.workspace);
+        }
+        if( !fs.existsSync( config.workspace ) )
+        {
+            Utils.mkdir( config.workspace );
+        }
+
+    }else
+    {
+        config.workspace = config.project.child.src.path;
+    }
+
     //主题配置文件路径
     if( config.theme_file_path && !PATH.isAbsolute( config.theme_file_path ) )
     {
