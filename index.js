@@ -287,7 +287,8 @@ function getConfigure(config)
 
      //默认配置文件
     var makefile = PATH.resolve(project_path,'.esconfig');
-    var root_path = PATH.join(project_path,"node_modules");
+    //easescript 路径
+    var root_path = PATH.join(project_path,"node_modules/easescript");
 
     config.system_lib_path=root_path;
     config.system_style_path=root_path;
