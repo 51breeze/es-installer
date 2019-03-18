@@ -251,8 +251,10 @@ function configToJson( config , depth )
             var val = typeof config[p] === "string" ? config[p].replace(/\\/g, '/') : config[p];
             if (type === 'array') {
                 item.push('"' + val + '"');
-            } else {
+            } else if( typeof val ==="string" ) {
                 item.push(tab + '"' + p + '":"'+val + '"');
+            } else if(val !==null ) {
+                item.push(tab + '"' + p + '":'+val);
             }
         }
     }
