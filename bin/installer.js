@@ -72,6 +72,7 @@ program
 //.option('--gh, --global-handle [variable name]', '全局引用EaseScript对象的变量名','EaseScript')
 .option('--src, --source-file [enable|disabled]', '是否需要生成源文件','enable')
 .option('--bm, --build-mode [app|other]', '构建文件模式', "app")
+.option('--init', '初始化项目')
 .option('--sps, --service-provider-syntax [php]', '服务提供者的语法');
 
 var mapKeys={
@@ -158,57 +159,66 @@ const questions = [
 }
 ];
 
-inquirer.prompt(questions).then(function(answers)
+program.parse( process.argv );
+
+if( program.init )
 {
-    var config = {};
-    if( answers.params )
+    inquirer.prompt(questions).then(function(answers)
     {
-        program.parse( ["",""].concat( answers.params.split(" ") ) );
-        for( var key in mapKeys )
+        var config = {};
+        if( answers.params )
         {
-            var name = mapKeys[ key ];
-            var val =  program[ name ];
-            if(  typeof val !== "undefined" )
+            program.parse( ["",""].concat( answers.params.split(" ") ) );
+            for( var key in mapKeys )
             {
-                switch( name ){
-                    case "syntax" :
-                        val =  val.toLowerCase();
-                    break;
-                    case "mode" :
-                        val =  val=='dev' ? 1 : val=='test' ? 2 : 3;
-                    break;
-                    case "strictType" :
-                    case "animate" :
-                    case "font" :
-                        val = val === 'enable';
-                    break;
+                var name = mapKeys[ key ];
+                var val =  program[ name ];
+                if(  typeof val !== "undefined" )
+                {
+                    switch( name ){
+                        case "syntax" :
+                            val =  val.toLowerCase();
+                        break;
+                        case "mode" :
+                            val =  val=='dev' ? 1 : val=='test' ? 2 : 3;
+                        break;
+                        case "strictType" :
+                        case "animate" :
+                        case "font" :
+                            val = val === 'enable';
+                        break;
+                    }
+                    config[ key ] = val;
                 }
-                config[ key ] = val;
             }
         }
-    }
 
-    var installer = answers.auto_installer;
-    delete answers.params;
-    var config = create( extend(config, answers) );
-    if( installer )
-    {
-        let child = spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['install'], {cwd:config.project_path,stdio: 'inherit'});
-        child.on("close",function()
+        var installer = answers.auto_installer;
+        delete answers.params;
+        var config = create( extend(config, answers) );
+        if( installer )
         {
-            let es = PATH.join(config.project_path,"node_modules/easescript/bin/es.js");
-            if( fs.existsSync(es) )
+            let child = spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['install'], {cwd:config.project_path,stdio: 'inherit'});
+            child.on("close",function()
             {
-                let path =`%~dp0${PATH.sep}node_modules${PATH.sep}easescript${PATH.sep}bin${PATH.sep}es.js`;
-                let cmd=`@IF EXIST "%~dp0${PATH.sep}node.exe" (
-                "%~dp0${PATH.sep}node.exe"  "${path}" %*
-                ) ELSE (
-                @SETLOCAL
-                @SET PATHEXT=%PATHEXT:;.JS;=;%
-                node  "${path}" %*
-                )`;
-                utils.setContents( PATH.join(config.project_path, "es.cmd"), cmd );
-            }
-        });
-    }
-});
+                let es = PATH.join(config.project_path,"node_modules/easescript/bin/es.js");
+                if( fs.existsSync(es) )
+                {
+                    let path =`%~dp0${PATH.sep}node_modules${PATH.sep}easescript${PATH.sep}bin${PATH.sep}es.js`;
+                    let cmd=`@IF EXIST "%~dp0${PATH.sep}node.exe" (
+                    "%~dp0${PATH.sep}node.exe"  "${path}" %*
+                    ) ELSE (
+                    @SETLOCAL
+                    @SET PATHEXT=%PATHEXT:;.JS;=;%
+                    node  "${path}" %*
+                    )`;
+                    utils.setContents( PATH.join(config.project_path, "es.cmd"), cmd );
+                }
+            });
+        }
+    });
+
+}else
+{
+    program.parse(["","","--help"] );
+}

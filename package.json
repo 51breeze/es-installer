@@ -1,6 +1,6 @@
 {
   "name": "easescript-installer",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "easescript installer",
   "main": "./index.js",
   "bin": {
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "version": "node ./bin/installer.js -V",
-    "init": "node ./bin/installer.js"
+    "init": "node ./bin/installer.js --init"
   },
   "repository": {
     "type": "git",
