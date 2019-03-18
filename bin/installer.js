@@ -134,7 +134,7 @@ const questions = [
 },
 {
     type: 'confirm',
-    message: '是否支持皮肤:',
+    message: '支持皮肤:',
     name: 'supportSkin'
 },
 {
@@ -153,7 +153,7 @@ const questions = [
 },
 {
     type: 'confirm',
-    message: '是否立即安装',
+    message: '立即安装',
     name: 'auto_installer'
 }
 ];

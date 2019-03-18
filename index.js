@@ -178,11 +178,7 @@ const package={
         "build": "node ./node_modules/easescript/bin/es.js -M production"
     },
     "devDependencies":{
-      "uglify-js": "^3.1.1",
-      "commander": "^2.11.0",
       "easescript":"1.1.14-beta",
-      "less": "^2.7.2",
-      "colors": "^1.1.2",
       "libxmljs": "^0.18.6"
     }
 }
@@ -291,7 +287,10 @@ function getConfigure(config)
 
      //默认配置文件
     var makefile = PATH.resolve(project_path,'.esconfig');
-    var root_path = PATH.join(__dirname,"../");
+    var root_path = PATH.join(project_path,"node_modules");
+
+    config.system_lib_path=root_path;
+    config.system_style_path=root_path;
 
     //编译器的路径
     config.root_path = root_path;
