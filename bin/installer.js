@@ -189,9 +189,7 @@ inquirer.prompt(questions).then(function(answers)
     }
 
     var installer = answers.auto_installer;
-    delete answers.auto_installer;
     delete answers.params;
-
     var config = create( extend(config, answers) );
     if( installer )
     {

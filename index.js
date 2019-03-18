@@ -395,7 +395,7 @@ function create(config)
     var packageinfo = extend({},package);
     packageinfo.name = config.project.name;
 
-    if( config.author )
+    if( config.description )
     {
         packageinfo.description = config.description;
     }
