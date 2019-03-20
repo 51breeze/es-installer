@@ -121,7 +121,7 @@ const buildConfig = {
             },
             "application":{
                 "path":"./",
-                "name":"easescript",
+                "name":"server",
             }
         },
     },
@@ -230,7 +230,7 @@ function buildProject(dir, base)
 
 function configToJson( config , depth )
 {
-    var tab = new Array( depth );
+    var tab = new Array( depth+1 );
     tab = tab.join("\t");
     var type = config instanceof Array ? 'array' : typeof config;
     if( type ==="string" )return tab+config;
@@ -249,14 +249,13 @@ function configToJson( config , depth )
                 item.push('"' + val + '"');
             } else if( typeof val ==="string" ) {
                 item.push(tab + '"' + p + '":"'+val + '"');
-            } else if(val !==null ) {
+            } else if(val !=null ) {
                 item.push(tab + '"' + p + '":'+val);
             }
         }
     }
 
-    tab = new Array( depth-1 );
-    tab = tab.join("\t");
+    tab = (new Array( depth )).join("\t");
     if( type ==='array' )
     {
         return '['+item.join(",")+']';
@@ -417,6 +416,7 @@ function create(config)
     {
         Utils.info("step next please use cmd 'npm install'." );
     }
+    Utils.copyfile("./Welcome.es", PATH.join(config.project.child.src.path,"Welcome.es"));
     return config;
 }
 

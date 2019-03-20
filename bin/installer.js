@@ -32,7 +32,7 @@ function keyValue(val) {
 }
 
 program
-.version( 'easescript-installer '+require('../package.json').version )
+.version( 'easescript-installer@'+require('../package.json').version )
 .option('-p, --path [dir]', '项目路径', cmd===cwd || cwd===root_path ? './project' : cwd )
 .option('-c, --config [file]', '指定配置文件',null)
 .option('-M, --minify [enable|disabled]', '是否需要压缩代码', null )
@@ -115,7 +115,19 @@ const questions = [
     type: 'input',
     message: '项目名:',
     name: 'project_path',
-    default: "./project"
+    default: "./project",
+    validate:function(val){
+        return val ? true : "项目名不能为空";
+    }
+},
+{
+    type: 'input',
+    message: '构建路径:',
+    name: 'build_path',
+    default: "./build",
+    validate:function(val){
+        return val ? true : "构建路径不能为空";
+    }
 },
 {
     type: 'input',
@@ -126,12 +138,6 @@ const questions = [
     type: 'author',
     message: '作者:',
     name: 'author',
-},
-{
-    type: 'input',
-    message: '构建路径:',
-    name: 'build_path',
-    default: "./build"
 },
 {
     type: 'confirm',
@@ -149,7 +155,7 @@ const questions = [
 },
 {
     type: 'input',
-    message: '构建参数:',
+    message: '编译参数:',
     name: 'params'
 },
 {
