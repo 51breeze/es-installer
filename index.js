@@ -416,7 +416,7 @@ function create(config)
     {
         Utils.info("step next please use cmd 'npm install'." );
     }
-    Utils.copyfile("./Welcome.es", PATH.join(config.project.child.src.path,"Welcome.es"));
+    Utils.copyfile( PATH.join(__dirname, "./Welcome.es"), PATH.join(config.project.child.src.path,"Welcome.es") );
     return config;
 }
 
