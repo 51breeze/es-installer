@@ -179,7 +179,9 @@ const package={
     },
     "devDependencies":{
       "easescript":"1.1.14-beta",
-      "libxmljs": "^0.18.6"
+      "libxmljs": "^0.18.6",
+      "express": "^4.16.4",
+      "socket.io": "^2.2.0"
     }
 }
 
