@@ -209,7 +209,7 @@ const package={
         "build": "node ./node_modules/easescript/bin/es.js {params} -M production {-p} {-o} {-b} {-c} {--chunk} {--pack}"
     },
     "devDependencies":{
-      "easescript":"1.1.23-beta",
+      "easescript":"1.1.24-beta",
       "libxmljs": "^0.18.6",
     }
 }
