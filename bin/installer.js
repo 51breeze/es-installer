@@ -135,9 +135,25 @@ const questions = [
     name: 'description',
 },
 {
-    type: 'author',
+    type: 'input',
     message: '作者:',
     name: 'author',
+},
+{
+    type: 'input',
+    message: '配置文件路径:',
+    name: 'config_path',
+},
+{
+    type: 'input',
+    message: '入口文件(file/path):',
+    default: "[project_src_dir]",
+    name: 'bootstrap',
+},
+{
+    type: 'input',
+    message: 'libxmljs路径:',
+    name: 'libxmljs_local_path',
 },
 {
     type: 'confirm',
@@ -145,12 +161,22 @@ const questions = [
     name: 'supportSkin'
 },
 {
+    type: 'confirm',
+    message: '是否拆分打包:',
+    name: 'chunk'
+},
+{
+    type: 'confirm',
+    message: '是否使用webpack打包:',
+    name: 'use_webpack'
+},
+{
     type: 'list',
-    message: '运行环境:',
-    name: 'syntax',
+    message: '服务端运行环境:',
+    name: 'service_provider_syntax',
     choices: [
-        "javascript",
         "php",
+        "node",
     ]
 },
 {
@@ -182,7 +208,7 @@ if( program.init )
                 if(  typeof val !== "undefined" )
                 {
                     switch( name ){
-                        case "syntax" :
+                        case "service_provider_syntax" :
                             val =  val.toLowerCase();
                         break;
                         case "mode" :
@@ -202,6 +228,7 @@ if( program.init )
         var installer = answers.auto_installer;
         delete answers.params;
         var config = create( extend(config, answers) );
+
         if( installer )
         {
             let child = spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['install'], {cwd:config.project_path,stdio: 'inherit'});
@@ -218,7 +245,7 @@ if( program.init )
                     @SET PATHEXT=%PATHEXT:;.JS;=;%
                     node  "${path}" %*
                     )`;
-                    utils.setContents( PATH.join(config.project_path, "es.cmd"), cmd );
+                    fs.writeFileSync( PATH.join(config.project_path, "es.cmd"), cmd.replace(/\t/g,'') );
                 }
             });
         }

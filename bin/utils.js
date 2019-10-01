@@ -36,28 +36,7 @@ utils.debug = debug;
 function error( msg ){console.log( msg.error );}
 utils.error = error;
 
-/**
- * 获取文件内容
- * @param filepath
- * @returns {*}
- */
-function getContents( filepath )
-{
-    return fs.readFileSync( filepath , 'utf-8');
-}
-utils.getContents=getContents;
 
-/**
- * 设置文件的内容
- * @param filepath
- * @returns {*}
- */
-function setContents( filepath, contents )
-{
-    utils.mkdir( PATH.dirname(filepath) );
-    return fs.writeFileSync(filepath, contents );
-}
-utils.setContents=setContents;
 
 /**
  * 获取目录下的所有文件
@@ -84,31 +63,6 @@ function isDir( path ) {
     return fileStat ? fileStat.isDirectory() : false;
 }
 utils.isDir = isDir;
-
-/**
- * 返回一个完整的绝对路径
- * @param dir
- * @param path
- * @returns {*}
- */
-function getResolvePath( dir, path )
-{
-    return PATH.resolve( dir, (path || '').replace(/\./g,PATH.sep) ).replace(/\\/g,'/');
-}
-utils.getResolvePath=getResolvePath;
-
-/**
- * 返回一个指定路径到另一个路径的相对目录
- * @param from
- * @param to
- * @returns {*}
- */
-function getRelativePath( from, to )
-{
-    return PATH.relative( from, (to || '').replace(/\./g,PATH.sep) ).replace(/\\/g,'/');
-}
-utils.getRelativePath=getRelativePath;
-
 
 function getBuildPath(config, path, prop)
 {
@@ -187,44 +141,5 @@ function trim( str )
     return typeof str === "string" ? str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,'') : '';
 }
 utils.trim = trim;
-
-
-utils.hash = function hash(str, len)
-{
-    var map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    var val="";
-    len = len || 8;
-    str = utils.MD5(str,len);
-    for(var i=0; i<len; i++){
-        var g = str.charCodeAt(i);
-        val+=map[ ( g ^ str.charCodeAt( i ) ) - g & 0x33 ];
-    }
-    return val;
-}
-
-utils.forEach=function forEach(target, callback, thisArg )
-{
-    if( !target )return;
-    thisArg = thisArg||target;
-    for( var i in target)
-    {
-        if( target.hasOwnProperty(i) )
-        {
-            callback.call(thisArg, target[i], i );
-        }
-    }
-}
-
-utils.toKeys=function toKeys(object)
-{
-    var item=[];
-    utils.forEach(object,function (val,key) {
-        item.push(key);
-    })
-    return item;
-}
-
-
-
 
 module.exports = utils;
