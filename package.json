@@ -1,6 +1,6 @@
 {
   "name": "easescript-installer",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "easescript installer",
   "main": "./index.js",
   "bin": {
@@ -29,11 +29,5 @@
     "commander": "^2.11.0",
     "extend": ">=2.0.2",
     "inquirer": "^6.2.2"
-  },
-  "devDependencies": {
-    "commander": "^2.11.0",
-    "extend": ">=2.0.2",
-    "inquirer": "^6.2.2",
-    "colors": "^1.1.2"
   }
 }

@@ -3,7 +3,6 @@ const PATH = require('path');
 const Utils = require('./bin/utils.js');
 const extend =  require('extend');
 
-//全局配置
 const defaultConfig = {
     //需要编译文件的后缀
     'suffix': '.es', 
@@ -20,7 +19,7 @@ const defaultConfig = {
     //是否需要打包字体库
     'font':true,
     //指定主题文件名
-    'theme':"default",
+    'theme':null,
     //需要使用的主题文件路径
     'theme_file_path':null,
     //是否需要输出编译后的原文件
@@ -31,6 +30,8 @@ const defaultConfig = {
     'build_path':'./build',
     //默认的工程目录名
     'project_path':'./project',
+    //工作根目录
+    'workspace':'./src',
     //皮肤文件的后缀名
     'skin_file_suffix':'.html',
     //皮肤样式配置文件, 为每一个组件指定默认的皮肤类. 格式为 {"component.classname":"skin.path"}
@@ -63,6 +64,8 @@ const defaultConfig = {
     'script_part_load':true,
      //系统库路径名
     'system_lib_path_name':'es',
+    //系统全局类路径名
+    'system_global_path':PATH.join(__dirname,"../javascript/system"),
      //系统库路径
     'system_lib_path':PATH.join(__dirname,"../"),
     //系统样式路径名
@@ -77,31 +80,51 @@ const defaultConfig = {
     'clean':false,
     //1 标准模式（开发时使用） 2 性能模式（生产环境使用）
     'mode': 1, 
-    //是否只构建application应用入口的文件
-    'build_mode':"app",
+    //是否只构建application应用入口的文件 all app
+    'build_mode':"all",
+    //当编译出错时退出程序
+    "on_error_exit":false,
+    //监听当前工作空间中的文件变化
+    "watching":false,
+    //指定监听文件的后缀
+    "watchMatchSuffix":null,
+    //允许启动服务
+    "serverEnable":true,
+    //使用模块导出格式,仅js
+    "module_exports":false,
+    //加载模块时的后缀
+    "module_suffix":'.js',
+    //是否需要打包文件
+    "build_pack":true,
+    //启用热替换
+    "hot_replacement":true,
 };
 
 //构建目录配置
 const buildConfig = {
     "build": {
-        "path": "./",
-        "name": "build",
+        "path": "",
+        "name": "",
         "child": {
+            "assets":{
+                "path": "@webroot",
+                "name": "assets",
+            },
             "js": {
                 "path": "@webroot",
                 "name": "js",
             },
             "img": {
-                "path": "@webroot",
-                "name": "img",
+                "path": "@assets",
+                "name": "./",
             },
             "css": {
                 "path": "@webroot",
                 "name": "css",
             },
             "font": {
-                "path": "@webroot",
-                "name": "fonts",
+                "path": "@assets",
+                "name": "./",
             },
             "view": {
                 "path": "@application",
@@ -115,13 +138,21 @@ const buildConfig = {
                 "path":"./",
                 "name":"webroot",
             },
+            "system":{
+                "path":"@js",
+                "name":"system",
+            },
+            "core":{
+                "path":"@js",
+                "name":"./",
+            },
             "bootstrap":{
                 "path":"@application",
                 "name":"bootstrap",
             },
             "application":{
                 "path":"./",
-                "name":"server",
+                "name":"easescript",
             }
         },
     },
@@ -173,17 +204,44 @@ const package={
     "description": "Test",
     "scripts": {
         "version": "node ./node_modules/easescript/bin/es.js -V",
-        "dev": "node ./node_modules/easescript/bin/es.js -M dev",
-        "test": "node ./node_modules/easescript/bin/es.js -M test",
-        "build": "node ./node_modules/easescript/bin/es.js -M production"
+        "dev": "node ./node_modules/easescript/bin/es.js {params} -M dev {-p} {-o} {-b} {-c} {--chunk} {--pack}",
+        "test": "node ./node_modules/easescript/bin/es.js {params} -M test {-p} {-o} {-b} {-c} {--chunk} {--pack}",
+        "build": "node ./node_modules/easescript/bin/es.js {params} -M production {-p} {-o} {-b} {-c} {--chunk} {--pack}"
     },
     "devDependencies":{
-      "easescript":"1.1.14-beta",
+      "easescript":"1.1.23-beta",
       "libxmljs": "^0.18.6",
-      "express": "^4.16.4",
-      "socket.io": "^2.2.0"
     }
 }
+
+const webpackDeps ={
+    "dependencies": {
+        "@babel/core": "^7.0.0",
+        "babel": "^6.23.0",
+        "babel-preset-es2015": "^6.24.1",
+    },
+    "devDependencies": {
+        "less": "^2.7.3",
+        "webpack": "^4.39.2",
+        "webpack-cli": "^3.3.6",
+        "webpack-dev-server": "^3.7.0",
+        "style-loader": "^1.0.0",
+        "url-loader": "^2.1.0",
+        "css-loader": "^3.2.0",
+        "babel-loader": "^8.0.6",
+        "less-loader": "^5.0.0",
+        "less-plugin-glob": "^3.0.0",
+        "file-loader": "^4.2.0",
+        "html-entities": "^1.2.1",
+        "mini-css-extract-plugin": "^0.8.0",
+        "source-map": "^0.7.3",
+        "ansi-html": "0.0.7",
+        "bindings": "^1.5.0",
+        "events": "^3.0.0",
+        "loglevel": "^1.6.3",
+        "strip-ansi": "^5.2.0",
+    }
+};
 
 
 /**
@@ -354,7 +412,7 @@ function getConfigure(config)
                 {
                     throw new ReferenceError( item+" is not exists.");
                 }
-                var fileconfig = JSON.parse( Utils.getContents(item) );
+                var fileconfig = JSON.parse( fs.readFileSync(item) );
                 if( fileconfig ){
                     dataitem = extend(true,dataitem,fileconfig);
                 }
@@ -383,7 +441,7 @@ function getConfigure(config)
     config.build_application_name = Utils.getBuildPath(config,"build.application","name");
 
     //生成一个默认的配置文件
-    Utils.setContents(makefile, configToJson( config , 1 ) );
+    fs.writeFileSync(makefile, configToJson( config , 1 ) );
     return config;
 }
 
@@ -391,8 +449,39 @@ function getConfigure(config)
 //创建工程配置
 function create(config)
 {
-    config.clean = true;
+    const cmd = {
+          "-p":"project_path",
+          "-o":"build_path",
+          "-c":"config_path",
+          "-b":"bootstrap",
+    }
+
     config = getConfigure( config );
+
+    ['dev','test','build'].forEach( name=>{
+        package.scripts[ name ] = package.scripts[ name ].replace(/\{([\w\-]+)\}/g, function(a,b){
+            switch( b )
+            {
+                case "--chunk" :
+                    return config.chunk ? "--chunk" : '';
+                case "--pack" :
+                    return config.use_webpack ? '' : '--pack';
+                case "params" :
+                    return config.params || '';
+                case "-b" :
+                    return config.bootstrap === "[project_src_dir]" ?  "" :  "-b "+config.bootstrap;
+                default :
+                     return  config[ cmd[b] ] && `${b} ${config[ cmd[b] ]}` || '';
+            }
+        });
+    });
+
+    if( config.libxmljs_local_path )
+    {
+        const libxmljs_local_path = PATH.isAbsolute( config.libxmljs_local_path ) ? config.libxmljs_local_path : PATH.resolve( process.cwd(), config.libxmljs_local_path);
+        package.devDependencies.libxmljs="file:"+libxmljs_local_path;
+    }
+
     var packageinfo = extend({},package);
     packageinfo.name = config.project.name;
 
@@ -411,8 +500,13 @@ function create(config)
        delete packageinfo.devDependencies.libxmljs;
     }
 
+    if( config.use_webpack )
+    {
+        packageinfo = extend(true,packageinfo,webpackDeps);
+    }
+
     //config
-    Utils.setContents( PATH.join(config.project_path, "package.json"), configToJson( package , 1 ) );
+    fs.writeFileSync( PATH.join(config.project_path, "package.json"), configToJson( packageinfo , 1 ) );
     Utils.info('Project create done, path:'+config.project.path+".");
     if( !config.auto_installer )
     {
