@@ -10,10 +10,10 @@ const package={
     "description": "Test",
     "scripts": {
         "version": "node ./node_modules/easescript/bin/es.js -V",
-        "dev": "node ./node_modules/easescript/bin/es.js -M dev {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
-        "test": "node ./node_modules/easescript/bin/es.js -M test {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
+        "dev": "node ./node_modules/easescript/bin/es.js -m dev {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
+        "test": "node ./node_modules/easescript/bin/es.js -m test {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
         "start": "node {--start}",
-        "build": "node ./node_modules/easescript/bin/es.js -M production {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}"
+        "build": "node ./node_modules/easescript/bin/es.js -m production {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}"
     },
     "devDependencies":{
       "easescript":"1.1.24-beta",
@@ -41,6 +41,7 @@ const webpackDeps ={
         "file-loader": "^4.2.0",
         "html-entities": "^1.2.1",
         "mini-css-extract-plugin": "^0.8.0",
+        "html-webpack-plugin": "^3.2.0",
         "source-map": "^0.7.3",
         "ansi-html": "0.0.7",
         "bindings": "^1.5.0",
@@ -181,6 +182,7 @@ function create(config)
         }
         Utils.copyfile( PATH.resolve("./config/webpack/dev.js"), PATH.join(bin,"start.js") );
         Utils.copyfile( PATH.resolve("./config/webpack/production.js"), PATH.join(bin,"build.js") );
+        Utils.copyfile( PATH.resolve("./index.html"), PATH.join(config.project_path,"index.html") );
         packageinfo = extend(true,packageinfo,webpackDeps);
     }
 

@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const webpack = require("webpack");
-const easescript_root = require.resolve("easescript");
+const easescript_root = path.dirname( path.dirname(require.resolve("easescript") ) );
 const loader = require.resolve("easescript/lib/loader");
 const builder = require("easescript/javascript/builder");
 const {spawn} = require('child_process');
@@ -69,9 +69,9 @@ function start()
         "@style":easescript_root
       },
       modules:[
-        path.resolve( process.cwd() ),
-        path.resolve(easescript_root, "es"),
-        path.resolve(easescript_root, "javascript/system"),
+        process.cwd(),
+        easescript_root,
+        path.resolve(easescript_root, "javascript"),
         path.resolve(process.cwd(), "node_modules"),
       ]
     },
@@ -82,7 +82,7 @@ function start()
           include:[
             path.resolve(easescript_root, "javascript"),
             path.resolve(easescript_root, "es"),
-            process.cwd()
+            project_config.workspace
           ],
           use: [
             {

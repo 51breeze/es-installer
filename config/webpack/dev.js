@@ -1,12 +1,12 @@
 const path = require("path");
 const fs = require("fs");
 const webpack = require("webpack");
-const easescript_root = require.resolve("easescript");
-const loader = require.resolve("easescript/lib/loader");
+const easescript_root = path.dirname( path.dirname(require.resolve("easescript") ) );
+const es = require("easescript");
 const builder = require("easescript/javascript/builder");
 const webpackDevServer = require('webpack-dev-server');
+const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
-const utils = require('./utils.js');
 
 function findConfigPath( dir )
 {
@@ -20,6 +20,35 @@ function findConfigPath( dir )
       dir = path.dirname( dir );
   }
   return null;
+}
+
+function createBootstrap( config, modules )
+{
+
+  const chunks = modules.map( module=>{
+      var name = `import(/*webpackChunkName:"${module.fullclassname.replace(/\./g,'-')}"*/ "${module.filename}" )`;
+      if( module.isDefaultBootstrapModule )
+      {
+        var method = module.defineMetaTypeList.Router ?  module.defineMetaTypeList.Router.param.default : '';
+        name+=`.then(function(module){
+            var obj = new (module.default || module)();
+            ${method ? "obj."+method+"()" : 'console.log("No default method is specified.")' };
+        })`;
+      }
+      return name;
+  });
+
+  const content = `import "@style/less/main.less";
+                  import Event from '@system/Event.js';
+                  import System from '@system/System.js';
+                  var global = System.getGlobalEvent();
+                  global.addEventListener(Event.READY,function (e) {
+                   ${chunks.join(";\n")}
+                  },false,-500);`;
+
+   const file = path.join(config.project.path,"bootstrap.js");
+   fs.writeFileSync( file, content.replace(/[\s]{3,}/g,'\n') );
+   return file;
 }
 
 var initConfig = false;
@@ -43,7 +72,7 @@ function start()
      throw new Error("Not found project config file.");
   }
 
-  const project_config = JSON.parse( fs.readFileSync( config_path ) );
+  const project_config =  es.createConfigure( JSON.parse( fs.readFileSync( config_path ) ) );
   const lessOptions = {
     globalVars:builder.getLessVariables( project_config ),
     paths:[
@@ -51,29 +80,30 @@ function start()
     ]
   };
 
+  const bootstrap = es.getBootstrap( project_config );
+  const entryIndex = createBootstrap(project_config, bootstrap );
+
   const config = {
     mode:"development",
     devtool:"(none)",
-    entry:{
-      'index': path.resolve(__dirname,'main.js'),
-    },
+    entry:{"index":entryIndex},
     output: {
       path:path.resolve( project_config.build_path ),
-      filename: './js/[name].bundle.js',
-      chunkFilename:'./js/[name].bundle.js',
+      filename: './js/[name].js',
+      chunkFilename:'./js/[name].js',
     },
     resolve:{
       extensions:[".js", ".json",".css",".less",'.es'],
       alias:{
         "@system":path.resolve(easescript_root, "javascript/system"),
-        "@core":easescript_root,
+        "@es":path.resolve(easescript_root,"es"),
         "@src":project_config.workspace,
-        "@style":easescript_root
+        "@style":path.resolve(easescript_root,"style")
       },
       modules:[
-        path.resolve( process.cwd() ),
-        path.resolve(easescript_root, "es"),
-        path.resolve(easescript_root, "javascript/system"),
+        process.cwd(),
+        easescript_root,
+        path.resolve(easescript_root, "javascript"),
         path.resolve(process.cwd(), "node_modules"),
       ]
     },
@@ -94,11 +124,11 @@ function start()
           include:[
             path.resolve(easescript_root, "javascript"),
             path.resolve(easescript_root, "es"),
-            process.cwd()
+            project_config.workspace
           ],
           use: [
             {
-              loader:loader,
+              loader:es.loader,
               options:{
                 mode:"development",
                 globalVars:lessOptions.globalVars,
@@ -132,13 +162,38 @@ function start()
       ]
     },
     plugins: [
-    // new MyPlugin({context:__dirname}),
-    // new webpack.MemoryOutputFileSystem()
-    // new ExtractTextWebpackPlugin({filename:'[name].min.css'})
-    //new MiniCssExtractPlugin({filename: "./css/[name].css"}),
-      //new webpack.NamedModulesPlugin(),
-      //new webpack.HotModuleReplacementPlugin()
-    ]
+       new htmlWebpackPlugin({
+          "template": path.join(project_config.project.path,"index.html"),
+       })
+    ],
+    optimization: {
+      splitChunks: {
+        chunks: 'all',
+        minSize: 30000,
+        maxSize: 0,
+        minChunks:1,
+        maxAsyncRequests: 5,
+        maxInitialRequests: 3,
+        automaticNameDelimiter: '~',
+        name: true,
+        cacheGroups: {
+          vendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
+            name:"vendor"
+          },
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+            name:"common"
+          }
+        }
+      },
+      runtimeChunk: {
+        name: 'runtime'
+      }
+    }
   };
 
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
