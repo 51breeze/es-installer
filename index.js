@@ -10,10 +10,9 @@ const package={
     "description": "Test",
     "scripts": {
         "version": "node ./node_modules/easescript/bin/es.js -V",
-        "dev": "node ./node_modules/easescript/bin/es.js -m dev {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
-        "test": "node ./node_modules/easescript/bin/es.js -m test {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
+        "init": "node ./node_modules/easescript/bin/es.js --init -m test {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
         "start": "node {--start}",
-        "build": "node ./node_modules/easescript/bin/es.js -m production {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}"
+        "build": "node {--build}"
     },
     "devDependencies":{
       "easescript":"1.1.24-beta",
@@ -93,7 +92,7 @@ const cmd = {
     "-b":"bootstrap",
 }
 
-const types = ['dev','test','build','start'];
+const types = ['init','build','start'];
 
 //创建工程配置
 function create(config)
@@ -144,6 +143,8 @@ function create(config)
                     return config.other || '';
                 case "--start" :
                     return PATH.join(config.project_path,"bin","start.js");
+                case "--build" :
+                    return PATH.join(config.project_path,"bin","build.js");
                 default :
                     return  config[ cmd[b] ] && `${b} ${config[ cmd[b] ]}` || '';
             }
@@ -180,8 +181,31 @@ function create(config)
         {
             Utils.mkdir( bin );
         }
-        Utils.copyfile( PATH.resolve("./config/webpack/dev.js"), PATH.join(bin,"start.js") );
-        Utils.copyfile( PATH.resolve("./config/webpack/production.js"), PATH.join(bin,"build.js") );
+
+        function replaceOption( content )
+        {
+            return content.toString().replace(/\/\*\[(\w+)\]\*\//g,function(a,b){
+                switch( b )
+                {
+                    case "INSTALL_OPTIONS":
+                         const options = {
+                            chunk:config.chunk,
+                            config:config.config_path,
+                            project:config.project_path.replace(/\\/g,'/'),
+                            build:config.build_path.replace(/\\/g,'/'),
+                         };
+                    return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
+                    case "INSTALL_WELCOME_PATH":
+                    return `const INSTALL_WELCOME_PATH="${PATH.resolve("./Welcome.es").replace(/\\/g,'/')}";`;
+
+                }
+                return "";
+            });
+        }
+
+    
+        fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption( fs.readFileSync( PATH.resolve("./config/webpack/dev.js") ) ) )
+        fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption( fs.readFileSync( PATH.resolve("./config/webpack/production.js") ) ) )
         Utils.copyfile( PATH.resolve("./index.html"), PATH.join(config.project_path,"index.html") );
         packageinfo = extend(true,packageinfo,webpackDeps);
     }
@@ -193,8 +217,7 @@ function create(config)
     {
         Utils.info("Step next please use cmd 'npm install'. in project path." );
     }
-    
-    Utils.copyfile( PATH.join(__dirname, "./Welcome.es"), PATH.join(config.project_path,"Welcome.es") );
+
     return config;
 }
 

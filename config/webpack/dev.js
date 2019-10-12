@@ -7,6 +7,8 @@ const builder = require("easescript/javascript/builder");
 const webpackDevServer = require('webpack-dev-server');
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
+/*[INSTALL_OPTIONS]*/
+/*[INSTALL_WELCOME_PATH]*/
 
 function findConfigPath( dir )
 {
@@ -47,26 +49,23 @@ function createBootstrap( config, modules )
                   },false,-500);`;
 
    const file = path.join(config.project.path,"bootstrap.js");
-   fs.writeFileSync( file, content.replace(/[\s]{3,}/g,'\n') );
+   fs.writeFileSync( file, content.replace(/[\s]{2,}/g,'\n') );
    return file;
 }
 
 var initConfig = false;
+var hasInitConfig = false;
 function start()
 {
   var config_path = findConfigPath( process.cwd() );
   if( !config_path && !initConfig )
   {
     initConfig = true;
-    const package = require( path.join(process.cwd(),'package.json') );
-    const cmd = package.scripts.dev+" --init";
-    const args = cmd.split( /\s+/g ).slice(1);
-    const child = spawn("node", args, {cwd:process.cwd(),stdio: 'inherit'});
-    child.on("close",start);
+    hasInitConfig = true;
+    spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['run','init'], {cwd:process.cwd(),stdio: 'inherit'}).on("close",start);
     return;
   }
 
-  initConfig = true;
   if( !fs.existsSync(config_path) )
   {
      throw new Error("Not found project config file.");
@@ -80,17 +79,42 @@ function start()
     ]
   };
 
+  if( hasInitConfig )
+  {
+    hasInitConfig = false;
+    if( typeof fs.copyFileSync === "function" ){
+        fs.copyFileSync( INSTALL_WELCOME_PATH, path.join(project_config.project.child.src.path,"Welcome.es") );
+    }else{
+        fs.createReadStream(INSTALL_WELCOME_PATH).pipe( fs.createWriteStream( path.join(project_config.project.child.src.path,"Welcome.es") ) );
+    } 
+  }
+
   const bootstrap = es.getBootstrap( project_config );
-  const entryIndex = createBootstrap(project_config, bootstrap );
+  const entryMap = {};
+  if( INSTALL_OPTIONS.chunk )
+  {
+     entryMap.index=createBootstrap(project_config, bootstrap );
+  }else{
+    bootstrap.forEach( module=>{
+         entryMap[ module.fullclassname.toLowerCase().replace(/\./g,'-') ] = module.filename;
+    });
+  }
+
+  
+  const webroot_path = project_config.build.child.webroot.path;
+  const js_path = path.relative( webroot_path, project_config.build.child.js.path  );
+  const font_path = path.relative( webroot_path, project_config.build.child.font.path  );
+  const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
+  const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
 
   const config = {
     mode:"development",
     devtool:"(none)",
-    entry:{"index":entryIndex},
+    entry:entryMap,
     output: {
-      path:path.resolve( project_config.build_path ),
-      filename: './js/[name].js',
-      chunkFilename:'./js/[name].js',
+      path:path.resolve( webroot_path ),
+      filename:js_path+'/[name].js',
+      chunkFilename:js_path+'/[name].js',
     },
     resolve:{
       extensions:[".js", ".json",".css",".less",'.es'],
@@ -108,7 +132,7 @@ function start()
       ]
     },
     devServer: {
-      contentBase:path.resolve( project_config.build_path ),
+      contentBase:path.resolve( webroot_path ),
       hot:true,
       host:'localhost',
       open:true
@@ -131,6 +155,12 @@ function start()
               loader:es.loader,
               options:{
                 mode:"development",
+                es_project_config:project_config,
+                styleLoader:[
+                  'style-loader',
+                  'css-loader'
+                ],
+                onlyLocals:false,
                 globalVars:lessOptions.globalVars,
                 paths:lessOptions.paths
               },
@@ -156,17 +186,42 @@ function start()
           ],
         },
         {
-          test: /\.(eot|svg|ttf|woff|woff2|png|jpg|jpeg|gif)$/,
-          use: ['file-loader'],
+          test: /\.(eot|ttf|woff|woff2)$/,
+          use: [
+            {
+              loader:'file-loader',
+              options:{
+                outputPath:font_path
+              }
+            }
+          ],
         },
+        {
+          test:/\.(jpg|jpeg|png|svg|gif)/,
+          use:[
+            {
+              loader:'url-loader',
+              options:{
+                limit:8129,
+                fallback:'file-loader',
+                outputPath:img_path
+              }
+            }
+          ]
+        }
       ]
     },
     plugins: [
        new htmlWebpackPlugin({
           "template": path.join(project_config.project.path,"index.html"),
        })
-    ],
-    optimization: {
+    ]
+  };
+
+  
+  if( INSTALL_OPTIONS.chunk )
+  {
+    config.optimization={
       splitChunks: {
         chunks: 'all',
         minSize: 30000,
@@ -193,8 +248,8 @@ function start()
       runtimeChunk: {
         name: 'runtime'
       }
-    }
-  };
+    };
+  }
 
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
   var compiler = webpack( config );

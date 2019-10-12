@@ -2,36 +2,68 @@ const path = require("path");
 const fs = require("fs");
 const webpack = require("webpack");
 const easescript_root = path.dirname( path.dirname(require.resolve("easescript") ) );
-const loader = require.resolve("easescript/lib/loader");
+const es = require("easescript");
 const builder = require("easescript/javascript/builder");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
+/*[INSTALL_OPTIONS]*/
+/*[INSTALL_WELCOME_PATH]*/
 
-function findConfigPath( cwd )
+function findConfigPath( dir )
 {
   while( fs.lstatSync( dir ).isDirectory() && path.parse(dir).name )
   {
-    var config_path = path.resolve(cwd, '.esconfig');
-    if( !fs.existsSync(config_path) )
-    {
-        return findConfigPath( path.dirname( cwd ) ); 
-    }
-    return config_path;
+      var file = path.resolve( dir,'.esconfig');
+      if( fs.existsSync( file ) )
+      {
+          return file;
+      }
+      dir = path.dirname( dir );
   }
   return null;
 }
 
+function createBootstrap( config, modules )
+{
+
+  const chunks = modules.map( module=>{
+      var name = `import(/*webpackChunkName:"${module.fullclassname.replace(/\./g,'-')}"*/ "${module.filename}" )`;
+      if( module.isDefaultBootstrapModule )
+      {
+        var method = module.defineMetaTypeList.Router ?  module.defineMetaTypeList.Router.param.default : '';
+        name+=`.then(function(module){
+            var obj = new (module.default || module)();
+            ${method ? "obj."+method+"()" : 'console.log("No default method is specified.")' };
+        })`;
+      }
+      return name;
+  });
+
+  const content = `import "@style/less/main.less";
+                  import Event from '@system/Event.js';
+                  import System from '@system/System.js';
+                  var global = System.getGlobalEvent();
+                  global.addEventListener(Event.READY,function (e) {
+                   ${chunks.join(";\n")}
+                  },false,-500);`;
+
+   const file = path.join(config.project.path,"bootstrap.js");
+   fs.writeFileSync( file, content.replace(/[\s]{2,}/g,'\n') );
+   return file;
+}
+
+
 var initConfig = false;
+var hasInitConfig = false;
 function start()
 {
   var config_path = findConfigPath( process.cwd() );
   if( !config_path && !initConfig )
   {
     initConfig = true;
-    const package = require( path.join(process.cwd(),'package.json') );
-    const cmd = package.scripts.build+" --init";
-    const args = cmd.split( /\s+/g ).slice(1);
-    const child = spawn("node", args, {cwd:process.cwd(),stdio: 'inherit'});
-    child.on("close",start);
+    hasInitConfig = true;
+    spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['run','init'], {cwd:process.cwd(),stdio: 'inherit'}).on("close",start);
     return;
   }
 
@@ -41,24 +73,51 @@ function start()
      throw new Error("Not found project config file.");
   }
 
-  const project_config = JSON.parse( fs.readFileSync( config_path ) );
+ 
+  const project_config =  es.createConfigure( JSON.parse( fs.readFileSync( config_path ) ) );
   const lessOptions = {
     globalVars:builder.getLessVariables( project_config ),
     paths:[
         path.resolve(easescript_root,'style'),
     ]
   };
+  
+  if( hasInitConfig )
+  {
+    hasInitConfig = false;
+    if( typeof fs.copyFileSync === "function" ){
+        fs.copyFileSync( INSTALL_WELCOME_PATH, path.join(project_config.project.child.src.path,"Welcome.es") );
+    }else{
+        fs.createReadStream(INSTALL_WELCOME_PATH).pipe( fs.createWriteStream( path.join(project_config.project.child.src.path,"Welcome.es") ) );
+    } 
+  }
+
+  const bootstrap = es.getBootstrap( project_config );
+  const entryMap = {};
+  if( INSTALL_OPTIONS.chunk )
+  {
+     entryMap.index=createBootstrap(project_config, bootstrap );
+  }else{
+    bootstrap.forEach( module=>{
+         entryMap[ module.fullclassname.toLowerCase().replace(/\./g,'-') ] = module.filename;
+    });
+  }
+
+  
+  const webroot_path = project_config.build.child.webroot.path;
+  const js_path = path.relative( webroot_path, project_config.build.child.js.path  );
+  const font_path = path.relative( webroot_path, project_config.build.child.font.path  );
+  const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
+  const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
 
   const config = {
     mode:"production",
     devtool:"(none)",
-    entry:{
-      'index': path.resolve(__dirname,'main.js'),
-    },
+    entry:entryMap,
     output: {
-      path:path.resolve('./test/build'),
-      filename: './js/[name].bundle.js',
-      chunkFilename:'./js/[name].bundle.js',
+      path:path.resolve( webroot_path ),
+      filename:js_path+'/[name].js',
+      chunkFilename:js_path+'/[name].js',
     },
     resolve:{
       extensions:[".js", ".json",".css",".less",'.es'],
@@ -86,14 +145,15 @@ function start()
           ],
           use: [
             {
-              loader:loader,
+              loader:es.loader,
               options:{
                 mode:"production",
+                es_project_config:project_config,
                 styleLoader:[
                   MiniCssExtractPlugin.loader.replace(/\\/g,'/'),
-                  'css-loader',
-                  'less-loader'
+                  'css-loader'
                 ],
+                onlyLocals:false,
                 globalVars:lessOptions.globalVars,
                 paths:lessOptions.paths
               },
@@ -119,15 +179,43 @@ function start()
           ],
         },
         {
-          test: /\.(eot|svg|ttf|woff|woff2|png|jpg|jpeg|gif)$/,
-          use: ['file-loader'],
+          test: /\.(eot|ttf|woff|woff2)$/,
+          use: [
+            {
+              loader:'file-loader',
+              options:{
+                outputPath:font_path
+              }
+            }
+          ],
         },
+        {
+          test:/\.(jpg|jpeg|png|svg|gif)/,
+          use:[
+            {
+              loader:'url-loader',
+              options:{
+                limit:8129,
+                fallback:'file-loader',
+                outputPath:img_path
+              }
+            }
+          ]
+        }
       ]
     },
     plugins: [
-      new MiniCssExtractPlugin({filename: "./css/[name].css"}),
-    ],
-    optimization: {
+       new MiniCssExtractPlugin({filename:css_path+"/[name].css"}),
+       new htmlWebpackPlugin({
+        "template": path.join(project_config.project.path,"index.html"),
+       })
+    ]
+    
+  };
+
+  if( INSTALL_OPTIONS.chunk )
+  {
+    config.optimization={
       splitChunks: {
         chunks: 'all',
         minSize: 30000,
@@ -154,13 +242,12 @@ function start()
       runtimeChunk: {
         name: 'runtime'
       }
-    }
-
-  };
+    };
+  }
 
   var compiler = webpack( config );
   compiler.run(function(){
-    console.log( "==ok==="  )
+    console.log( "build completed!"  )
   });
 
 }
