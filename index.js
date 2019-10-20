@@ -15,7 +15,7 @@ const package={
         "build": "node {--build}"
     },
     "devDependencies":{
-      "easescript":"1.1.24-beta",
+      "easescript":"1.1.25-beta",
       "libxmljs": "^0.18.6",
     }
 }
