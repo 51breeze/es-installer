@@ -1,3 +1,4 @@
+process.env.NODE_ENV="development";
 const path = require("path");
 const fs = require("fs");
 const webpack = require("webpack");
@@ -169,10 +170,7 @@ function start()
     } 
   }
 
-  clean( project_config.build.child.js.path);
-  clean( project_config.build.child.font.path);
-  clean( project_config.build.child.img.path);
-  clean( project_config.build.child.css.path);
+  clean( project_config.build.path );
 
   const bootstrap = es.getBootstrap( project_config );
   const entryMap = {

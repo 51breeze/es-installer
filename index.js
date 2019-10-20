@@ -11,7 +11,7 @@ const package={
     "description": "Test",
     "scripts": {
         "version": "node ./node_modules/easescript/bin/es.js -V",
-        "init": "node ./node_modules/easescript/bin/es.js --init -m test {-p} {-o} {-b} {-c} {--chunk} {--pack} {--other}",
+        "init": "node ./node_modules/easescript/bin/es.js --init -m test {-p} {-o} {-b} {-c} {--sps} {--chunk} {--pack} {--other}",
         "start": "node {--start}",
         "build": "node {--build}"
     },
@@ -91,6 +91,7 @@ const cmd = {
     "-o":"build_path",
     "-c":"config_path",
     "-b":"bootstrap",
+    "--sps":"service_provider_syntax"
 }
 
 const types = ['init','build','start'];
