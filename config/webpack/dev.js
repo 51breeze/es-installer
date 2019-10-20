@@ -26,31 +26,111 @@ function findConfigPath( dir )
 
 function createBootstrap( config, modules )
 {
+  var router = builder.routerListToJsonString( es.compilation.getServiceRoutes( modules ) );
+  const bootstrapModule = modules.filter( module=>!!module.isDefaultBootstrapModule )[0] || modules[0];
+  const defaultRoute = bootstrapModule.defineMetaTypeList && bootstrapModule.defineMetaTypeList.Router ? 
+                  bootstrapModule.defineMetaTypeList.Router.param.provider : bootstrapModule.fullclassname+"@";
+  const hasApp = !!bootstrapModule.isApplication;
+  const data = {
+    "HTTP_DEFAULT_ROUTE":defaultRoute,
+    "HTTP_ROUTES":router||"{}",
+    "HTTP_ROUTE_PATH":null,
+    "MODE":config.mode,
+    "ORIGIN_SYNTAX":config.originMakeSyntax,
+    "URL_PATH_NAME":config.static_url_path_name||"PATH",
+    "HTTP_ROUTE_CONTROLLER":null,
+    "COMMAND_SWITCH":config.command_switch,
+    "WORKSPACE":config.workspace.replace(/\\/g,"/"),
+    "MODULE_SUFFIX":config.suffix,
+    "HOT_UPDATA":`function(){}`
+  };
 
-  const chunks = modules.map( module=>{
-      var name = `import(/*webpackChunkName:"${module.fullclassname.replace(/\./g,'-')}"*/ "${module.filename}" )`;
-      if( module.isDefaultBootstrapModule )
-      {
-        var method = module.defineMetaTypeList.Router ?  module.defineMetaTypeList.Router.param.default : '';
-        name+=`.then(function(module){
-            var obj = new (module.default || module)();
-            ${method ? "obj."+method+"()" : 'console.log("No default method is specified.")' };
-        })`;
-      }
-      return name;
-  });
+  if( config.hot_replacement)
+  {
+    data.HOT_UPDATA=`(function(){
+        var hotUpdateMap = {};
+        var hotUpdateEvent = function(e){
+              var module = e.hotUpdateModule;
+              var updateClass = System.getQualifiedClassName(module);
+              if( hotUpdateMap[updateClass] )
+              {
+                  var items = hotUpdateMap[updateClass].splice(0);
+                  while( items.length > 0 )
+                  {
+                      var item = items.shift();
+                      var callback = item[2];
+                      if( !callback.call(item, item[1], module) )
+                      {
+                          hotUpdateMap[updateClass].push( item );
+                      };
+                  }
+              }
+        };
 
-  const content = `import "@style/less/main.less";
-                  import Event from '@system/Event.js';
-                  import System from '@system/System.js';
-                  var global = System.getGlobalEvent();
-                  global.addEventListener(Event.READY,function (e) {
-                   ${chunks.join(";\n")}
-                  },false,-500);`;
+        if( !System.getGlobalEvent().hasEventListener("DEVELOPMENT_HOT_UPDATE") )
+        {
+            System.getGlobalEvent().addEventListener("DEVELOPMENT_HOT_UPDATE",hotUpdateEvent);
+        }
+
+        return function hotUpdate( target, callback )
+        {
+            var name = System.getQualifiedObjectName(target);
+            var list = hotUpdateMap[ name ] || (hotUpdateMap[ name ] = []);
+            list.push([name,target,callback]);
+        };
+
+    }())`;
+  }
+
+  var content = fs.readFileSync( path.join(__dirname,"bootstrap.js") ).toString();
+  if( INSTALL_OPTIONS.chunk )
+  {
+    data["LAZY_LOAD_MAP"] = "{"+modules.map( module=>{
+      return `"${module.fullclassname}": function( callback ){
+                import(/*webpackChunkName:"${module.fullclassname.replace(/\./g,'-')}"*/ "${module.filename}" ).then(function(module){
+                    callback(module.default || module);
+                });
+          }`;
+    }).join(",")+"}";
+  }
+
+  content = content.replace(/\[CODE\[(.*?)\]\]/ig, function (a, b) {
+      return data[b] !== undefined ? data[b] : "";
+  })
+
+  if( !INSTALL_OPTIONS.chunk )
+  {
+     content=`import ${bootstrapModule.classname} from "${bootstrapModule.filename}";\n`+content;
+  }
+
+  if( hasApp )
+  {
+     content=`import "@style/less/main.less";\n`+content;
+  }
 
    const file = path.join(config.project.path,"bootstrap.js");
-   fs.writeFileSync( file, content.replace(/[\s]{2,}/g,'\n') );
+   fs.writeFileSync( file, content );
    return file;
+}
+
+
+function clean( dir )
+{
+   if( fs.statSync( dir ).isDirectory() )
+   {
+      fs.readdirSync(dir).forEach( (file)=>{
+
+          file = path.join(dir, file );
+          const stat = fs.statSync(file);
+          if( stat.isDirectory() )
+          {
+              clean( file );
+              fs.rmdirSync( file );
+          }else{
+              fs.unlinkSync( file );
+          }
+      });
+  }
 }
 
 var initConfig = false;
@@ -89,17 +169,15 @@ function start()
     } 
   }
 
-  const bootstrap = es.getBootstrap( project_config );
-  const entryMap = {};
-  if( INSTALL_OPTIONS.chunk )
-  {
-     entryMap.index=createBootstrap(project_config, bootstrap );
-  }else{
-    bootstrap.forEach( module=>{
-         entryMap[ module.fullclassname.toLowerCase().replace(/\./g,'-') ] = module.filename;
-    });
-  }
+  clean( project_config.build.child.js.path);
+  clean( project_config.build.child.font.path);
+  clean( project_config.build.child.img.path);
+  clean( project_config.build.child.css.path);
 
+  const bootstrap = es.getBootstrap( project_config );
+  const entryMap = {
+    "index":createBootstrap(project_config, bootstrap )
+  };
   
   const webroot_path = project_config.build.child.webroot.path;
   const js_path = path.relative( webroot_path, project_config.build.child.js.path  );

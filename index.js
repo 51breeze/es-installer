@@ -206,6 +206,7 @@ function create(config)
     
         fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption( fs.readFileSync( PATH.resolve("./config/webpack/dev.js") ) ) )
         fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption( fs.readFileSync( PATH.resolve("./config/webpack/production.js") ) ) )
+        Utils.copyfile( PATH.resolve("./config/webpack/bootstrap.js"), PATH.join(bin,"bootstrap.js") );
         Utils.copyfile( PATH.resolve("./index.html"), PATH.join(config.project_path,"index.html") );
         packageinfo = extend(true,packageinfo,webpackDeps);
     }
