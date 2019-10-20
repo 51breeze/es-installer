@@ -2,6 +2,7 @@ const fs = require('fs');
 const PATH = require('path');
 const Utils = require('./utils.js');
 const extend =  require('extend');
+const root = __dirname;
 
 //安装包依赖
 const package={
@@ -196,7 +197,7 @@ function create(config)
                          };
                     return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
                     case "INSTALL_WELCOME_PATH":
-                    return `const INSTALL_WELCOME_PATH="${PATH.resolve("./Welcome.es").replace(/\\/g,'/')}";`;
+                    return `const INSTALL_WELCOME_PATH="${PATH.resolve(root,"./Welcome.es").replace(/\\/g,'/')}";`;
 
                 }
                 return "";
@@ -204,10 +205,10 @@ function create(config)
         }
 
     
-        fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption( fs.readFileSync( PATH.resolve("./config/webpack/dev.js") ) ) )
-        fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption( fs.readFileSync( PATH.resolve("./config/webpack/production.js") ) ) )
-        Utils.copyfile( PATH.resolve("./config/webpack/bootstrap.js"), PATH.join(bin,"bootstrap.js") );
-        Utils.copyfile( PATH.resolve("./index.html"), PATH.join(config.project_path,"index.html") );
+        fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption( fs.readFileSync( PATH.resolve(root,"./config/webpack/dev.js") ) ) )
+        fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption( fs.readFileSync( PATH.resolve(root,"./config/webpack/production.js") ) ) )
+        Utils.copyfile( PATH.resolve(root,"./config/webpack/bootstrap.js"), PATH.join(bin,"bootstrap.js") );
+        Utils.copyfile( PATH.resolve(root,"./index.html"), PATH.join(config.project_path,"index.html") );
         packageinfo = extend(true,packageinfo,webpackDeps);
     }
 
