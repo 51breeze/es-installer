@@ -118,10 +118,9 @@ function createBootstrap( config, modules )
 
 function clean( dir )
 {
-   if( fs.statSync( dir ).isDirectory() )
+   if( fs.existsSync(dir) && fs.statSync( dir ).isDirectory() )
    {
       fs.readdirSync(dir).forEach( (file)=>{
-
           file = path.join(dir, file );
           const stat = fs.statSync(file);
           if( stat.isDirectory() )
@@ -130,7 +129,6 @@ function clean( dir )
               fs.rmdirSync( file );
           }else{
               fs.unlinkSync( file );
-              
           }
       });
   }
