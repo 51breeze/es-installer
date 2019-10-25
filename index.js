@@ -160,7 +160,7 @@ function create(config)
 
     }else if( config.skin === false )
     {
-       delete packageinfo.devDependencies.libxmljs;
+       delete package.devDependencies.libxmljs;
     }
   
     var packageinfo = extend({},package);
