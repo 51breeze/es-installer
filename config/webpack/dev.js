@@ -332,6 +332,17 @@ function start()
   server.listen(8080, 'localhost', () => {
     console.log('dev server listening on port 8080');
   });
+
+  const bootstrap = path.join(webroot_path,"index.js");
+  server.app.use(function (req, res, next)
+  {
+     if( fs.existsSync( bootstrap ) )
+     {
+        require( bootstrap )( server.app );
+     }
+     
+  });
+
 }
 
 start();
