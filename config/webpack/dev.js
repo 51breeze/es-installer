@@ -333,12 +333,16 @@ function start()
     console.log('dev server listening on port 8080');
   });
 
-  const bootstrap = path.join(webroot_path,"index.js");
+  const serverBootFile = path.join(webroot_path,"index.js");
   server.app.use(function (req, res, next)
   {
-     if( fs.existsSync( bootstrap ) )
+     if( fs.existsSync( serverBootFile ) )
      {
-        require( bootstrap )( server.app );
+        const middleware = require( serverBootFile );
+        middleware.call(server.app, req, res, next );
+
+     }else{
+        next();
      }
      
   });
