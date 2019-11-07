@@ -82,6 +82,12 @@ const questions = [
 },
 {
     type: 'input',
+    message: '服务端运行地址:',
+    name: 'host',
+    default: "127.0.0.1:80",
+},
+{
+    type: 'input',
     message: '指定编译参数:',
     name: 'other'
 },

@@ -16,7 +16,7 @@ const package={
         "build": "node {--build}"
     },
     "devDependencies":{
-      "easescript":"1.1.27-beta",
+      "easescript":"1.1.28-beta",
       "libxmljs": "^0.18.6",
     }
 }
@@ -190,26 +190,34 @@ function create(config)
                 switch( b )
                 {
                     case "INSTALL_OPTIONS":
-                         const options = {
+                        const options = {
                             chunk:config.chunk,
                             config:config.config_path,
                             project:config.project_path.replace(/\\/g,'/'),
                             build:config.build_path.replace(/\\/g,'/'),
-                         };
-                    return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
+                        };
+                        return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
                     case "INSTALL_WELCOME_PATH":
-                    return `const INSTALL_WELCOME_PATH="${PATH.resolve(root,"./Welcome.es").replace(/\\/g,'/')}";`;
-
+                        return `const INSTALL_WELCOME_PATH="${PATH.resolve(root,"./Welcome.es").replace(/\\/g,'/')}";`;
+                    case "SERVER_HOST":
+                        const host = config.host.split(":");
+                        return `const SERVER_HOST = "${host[0]}";`;
+                    case "SERVER_PORT": 
+                        const port = config.host.split(":");
+                        return `const SERVER_PORT = ${port[1]||80};`;
                 }
                 return "";
             });
         }
 
-    
         fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption( fs.readFileSync( PATH.resolve(root,"./config/webpack/dev.js") ) ) )
         fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption( fs.readFileSync( PATH.resolve(root,"./config/webpack/production.js") ) ) )
+        fs.writeFileSync( PATH.join(config.project_path,"config.js"), replaceOption( fs.readFileSync( PATH.resolve(root,"./config.js") ) ) )
+
         Utils.copyfile( PATH.resolve(root,"./config/webpack/bootstrap.js"), PATH.join(bin,"bootstrap.js") );
+        Utils.copyfile( PATH.resolve(root,"./task.js"), PATH.join(bin,"task.js") );
         Utils.copyfile( PATH.resolve(root,"./index.html"), PATH.join(config.project_path,"index.html") );
+       
         packageinfo = extend(true,packageinfo,webpackDeps);
     }
 

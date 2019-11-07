@@ -8,6 +8,7 @@ const builder = require("easescript/javascript/builder");
 const webpackDevServer = require('webpack-dev-server');
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
+const Task = require('./task.js');
 /*[INSTALL_OPTIONS]*/
 /*[INSTALL_WELCOME_PATH]*/
 
@@ -114,25 +115,6 @@ function createBootstrap( config, modules )
    return file;
 }
 
-
-function clean( dir )
-{
-   if( fs.existsSync(dir) && fs.statSync( dir ).isDirectory() )
-   {
-      fs.readdirSync(dir).forEach( (file)=>{
-          file = path.join(dir, file );
-          const stat = fs.statSync(file);
-          if( stat.isDirectory() )
-          {
-              clean( file );
-              fs.rmdirSync( file );
-          }else{
-              fs.unlinkSync( file );
-          }
-      });
-  }
-}
-
 var initConfig = false;
 var hasInitConfig = false;
 function start()
@@ -169,7 +151,7 @@ function start()
     } 
   }
 
-  clean( project_config.build.path );
+  Task.before( project_config );
 
   const bootstrap = es.getBootstrap( project_config );
   const entryMap = {
@@ -181,6 +163,7 @@ function start()
   const font_path = path.relative( webroot_path, project_config.build.child.font.path  );
   const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
   const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
+  const runConfig = require( path.join(project_config.project.path, "config.js") );
 
   const config = {
     mode:"development",
@@ -210,7 +193,8 @@ function start()
       contentBase:path.resolve( webroot_path ),
       hot:true,
       host:'localhost',
-      open:true
+      open:true,
+      proxy:runConfig.development.proxy
     },
     watch:true,
     watchOptions:{
@@ -329,22 +313,42 @@ function start()
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
   var compiler = webpack( config );
   const server = new webpackDevServer(compiler, config.devServer);
-  server.listen(8080, 'localhost', () => {
-    console.log('dev server listening on port 8080');
-  });
+  
+  var buildDone = false;
+  compiler.hooks.done.tap("devServer", ()=>{
 
-  const serverBootFile = path.join(webroot_path,"index.js");
-  server.app.use(function (req, res, next)
-  {
-     if( fs.existsSync( serverBootFile ) )
-     {
-        const middleware = require( serverBootFile );
-        middleware.call(server.app, req, res, next );
+    if( buildDone === false )
+    {
+        buildDone = true;
+        const host = runConfig.development.host || "localhost";
+        const port = runConfig.development.port || 80;
+        server.listen( port , host, () => {
+          console.log('dev server listening on ${host}:${port}');
+        });
+    
+        process.on("SIGINT", ()=>{
+          server.close( ()=>{
+              console.log('dev server disconnected.');
+          });
+        });
 
-     }else{
-        next();
-     }
-     
+        const serverBootFile = path.join(webroot_path,"index.js");
+        server.app.use(function (req, res, next)
+        {
+          if( fs.existsSync( serverBootFile ) )
+          {
+              const middleware = require( serverBootFile );
+              middleware.call(server.app, req, res, next );
+
+          }else{
+              next();
+          }
+          
+        });
+
+        Task.after( project_config );
+    }
+
   });
 
 }

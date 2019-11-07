@@ -115,25 +115,6 @@ function createBootstrap( config, modules )
    return file;
 }
 
-
-function clean( dir )
-{
-   if( fs.existsSync(dir) && fs.statSync( dir ).isDirectory() )
-   {
-      fs.readdirSync(dir).forEach( (file)=>{
-          file = path.join(dir, file );
-          const stat = fs.statSync(file);
-          if( stat.isDirectory() )
-          {
-              clean( file );
-              fs.rmdirSync( file );
-          }else{
-              fs.unlinkSync( file );
-          }
-      });
-  }
-}
-
 var initConfig = false;
 var hasInitConfig = false;
 function start()
@@ -172,7 +153,7 @@ function start()
     } 
   }
 
-  clean( project_config.build.path );
+  Task.before( project_config );
   
   const bootstrap = es.getBootstrap( project_config );
   const entryMap = {
@@ -325,7 +306,8 @@ function start()
 
   var compiler = webpack( config );
   compiler.run(function(){
-    console.log( "build completed!"  )
+    Task.after( project_config );
+    console.log( "build completed!"  );
   });
 
 }
