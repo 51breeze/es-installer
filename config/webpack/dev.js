@@ -173,6 +173,7 @@ function start()
       path:path.resolve( webroot_path ),
       filename:js_path+'/[name].js',
       chunkFilename:js_path+'/[name].js',
+      publicPath:"/",
     },
     resolve:{
       extensions:[".js", ".json",".css",".less",'.es'],
