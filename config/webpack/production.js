@@ -8,6 +8,7 @@ const builder = require("easescript/javascript/builder");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
+const Task = require('./task.js');
 /*[INSTALL_OPTIONS]*/
 /*[INSTALL_WELCOME_PATH]*/
 
@@ -165,6 +166,7 @@ function start()
   const font_path = path.relative( webroot_path, project_config.build.child.font.path  );
   const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
   const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
+  const runConfig = require( path.join(project_config.project.path, "config.js") );
 
   const config = {
     mode:"production",
@@ -306,8 +308,9 @@ function start()
 
   var compiler = webpack( config );
   compiler.run(function(){
+    fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig.production||{}) );
     Task.after( project_config );
-    console.log( "build completed!"  );
+    console.log( "build completed!" );
   });
 
 }

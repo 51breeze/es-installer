@@ -18,6 +18,63 @@ var env=Object.merge(Internal.env,{
     "HOT_UPDATA":[CODE[HOT_UPDATA]]
 });
 
+
+function match(routes, pathName )
+{
+    if( !routes )
+    {
+        return null;
+    }
+
+    pathName = pathName.replace(/^\/|\/$/g,'');
+    const pathArr = pathName.split('/');
+    for(var p in routes )
+    {
+       const routeName = p.replace(/^\/|\/$/g,'').toLowerCase();
+       const routeArr = routeName.split('/');
+       if( routeArr.length === pathArr.length )
+       {
+           var args = [];
+           var props = [];
+           if( p.indexOf("{") >= 0 )
+           {
+                var index = 0;
+                var len = routeArr.length;
+                while( index < len )
+                {
+                    var name = routeArr[ index ];
+                    if( name.charAt(0) ==="{" && name.charAt(name.length-1) ==="}" )
+                    {
+                       props.push( name.slice(1,-1) )
+                       args.push( pathArr[index] );
+
+                    }else if( name !== pathArr[index].toLowerCase() )
+                    {
+                       break;
+                    }
+                    index++;
+                }
+
+                if( index < len )
+                {
+                    continue;
+                }
+
+           }else if( routeName !== pathName.toLowerCase() )
+           {
+               continue;
+           }
+
+           return {
+              provider:routes[ p ],
+              props:props,
+              args:args
+           }
+       }
+    }
+    return null;
+}
+
 var global = System.getGlobalEvent();
 global.addEventListener(Event.READY,function (e) {
 
@@ -25,56 +82,71 @@ global.addEventListener(Event.READY,function (e) {
     var path = Locator.query( env.URL_PATH_NAME );
     if( !path )
     {
-        path = '/'+Locator.path().join("/");
+        path = Locator.path().join("/") ;
+    }else{
+        path = path.replace(/^\/|\/$/g,'');
     }
 
     path = path.toLowerCase();
-    var router = routeMap[ path ] || env.HTTP_DEFAULT_ROUTE;
-    var controller = router ? router.split("@") : [];
+    var matchRouter = path && match( routeMap, path );
+    var router = path ? matchRouter : {
+        provider:env.HTTP_DEFAULT_ROUTE,
+        props:[],
+        args:[]
+    };
+    var controller = router ? router.provider.split("@") : [];
     var module = controller[0];
     var method = controller[1];
     env.HTTP_ROUTE_CONTROLLER=router;
 
-    if( typeof routeMap[ path ] !== "undefined")
+    if( router )
     {
-        env.HTTP_ROUTE_PATH = path ;
-    }else
-    {
-        Object.forEach(routeMap,function (provider, name)
+        if( matchRouter )
         {
-            if( provider === router ){
-            env.HTTP_ROUTE_PATH = name;
-            return false;
-            }
-        });
-    }
-
-    (env.HTTP_DISPATCHER=function(classname, method, callback)
-    {
-        lazyLoadMap[ classname ](function( module ){
-            if( typeof callback === "function" )
+            env.HTTP_ROUTE_PATH = path;
+        }else
+        {
+            Object.forEach(routeMap,function (provider, name)
             {
-                callback( module );
-
-            }else
-            {
-                var obj = new module();
-                obj.dispatchEvent( new Event(Event.INITIALIZING) );
-                if( method )
+                if( provider === router )
                 {
-                    if( typeof obj[method] === "function" )
+                    env.HTTP_ROUTE_PATH = name;
+                    return false;
+                }
+            });
+        }
+
+        (env.HTTP_DISPATCHER=function(classname, method, callback)
+        {
+            lazyLoadMap[ classname ](function( module ){
+                if( typeof callback === "function" )
+                {
+                    callback( module );
+
+                }else
+                {
+                    var obj = new module();
+                    obj.dispatchEvent( new Event(Event.INITIALIZING) );
+                    if( method )
                     {
-                        obj[method]();
-                    }else{
-                        throw new ReferenceError( method+" is not exist.");
+                        if( typeof obj[method] === "function" )
+                        {
+                            obj[method]();
+                        }else{
+                            throw new ReferenceError( method+" is not exist.");
+                        }
+                    }
+                    if( obj.hasEventListener(Event.INITIALIZE_COMPLETED) )
+                    {
+                        obj.dispatchEvent(new Event(Event.INITIALIZE_COMPLETED));
                     }
                 }
-                if( obj.hasEventListener(Event.INITIALIZE_COMPLETED) )
-                {
-                    obj.dispatchEvent(new Event(Event.INITIALIZE_COMPLETED));
-                }
-            }
-        });
-    })(module, method);
+            });
+        })(module, method);
+
+    }else if( global.dispatchEvent( new Event("ROUTE_NOT_EXISTS") ) )
+    {
+        document.body.innerHTML = "<p style='text-align: center;margin-top: 50px;font-size: 18px;'>Access page does not exist.</p>";
+    }
 
 },false,-500);

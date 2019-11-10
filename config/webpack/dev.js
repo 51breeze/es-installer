@@ -315,35 +315,41 @@ function start()
   const server = new webpackDevServer(compiler, config.devServer);
   
   var buildDone = false;
-  compiler.hooks.done.tap("devServer", ()=>{
+  compiler.hooks.done.tap("devServer", (stats)=>{
 
     if( buildDone === false )
     {
         buildDone = true;
+        fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig.development||{}) );
+
         const host = runConfig.development.host || "localhost";
         const port = runConfig.development.port || 80;
         server.listen( port , host, () => {
-          console.log('dev server listening on ${host}:${port}');
+            console.log(`dev server listening on ${host}:${port}`);
+            const serverBootFile = path.join(webroot_path,"index.js");
+            const createRouter = require( serverBootFile );
+            createRouter( (method,route,callback)=>{
+
+              server.app[method](route,callback);
+
+            },(req,res,name,error)=>{
+                var content = stats.compilation.assets[ name ] ? stats.compilation.assets[ name ].source() : "";
+                var status = 200;
+                if( error )
+                {
+                  status=500;
+                  content = error.message;
+                }
+                res.status( status );
+                res.send( content );
+                res.end();
+            });
         });
     
         process.on("SIGINT", ()=>{
           server.close( ()=>{
               console.log('dev server disconnected.');
           });
-        });
-
-        const serverBootFile = path.join(webroot_path,"index.js");
-        server.app.use(function (req, res, next)
-        {
-          if( fs.existsSync( serverBootFile ) )
-          {
-              const middleware = require( serverBootFile );
-              middleware.call(server.app, req, res, next );
-
-          }else{
-              next();
-          }
-          
         });
 
         Task.after( project_config );
