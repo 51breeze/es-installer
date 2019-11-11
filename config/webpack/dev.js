@@ -5,6 +5,7 @@ const webpack = require("webpack");
 const easescript_root = path.dirname( path.dirname(require.resolve("easescript") ) );
 const es = require("easescript");
 const builder = require("easescript/javascript/builder");
+const watch = require("easescript/lib/watch");
 const webpackDevServer = require('webpack-dev-server');
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
@@ -26,12 +27,28 @@ function findConfigPath( dir )
   return null;
 }
 
+var default_bootstrap_class = null;
 function createBootstrap( config, modules )
 {
+  var bootstrap_class = default_bootstrap_class;
+  if( !bootstrap_class )
+  {
+      bootstrap_class = config.default_bootstrap_class || modules.filter( item=>{
+          return item.classname.toLowerCase() === "index";
+      }).map( item=>item.fullclassname )[0];
+
+      if( !bootstrap_class )
+      {
+         bootstrap_class = (modules.filter( module=> module.defineMetaTypeList && module.defineMetaTypeList.Router )[0] || modules[0]).fullclassname;
+      }
+      default_bootstrap_class = bootstrap_class;
+  }
+
   var router = builder.routerListToJsonString( es.compilation.getServiceRoutes( modules ) );
-  const bootstrapModule = modules.filter( module=>!!module.isDefaultBootstrapModule )[0] || modules[0];
+  const bootstrapModule = modules.filter( module=> module.fullclassname === bootstrap_class )[0];
   const defaultRoute = bootstrapModule.defineMetaTypeList && bootstrapModule.defineMetaTypeList.Router ? 
                   bootstrapModule.defineMetaTypeList.Router.param.provider : bootstrapModule.fullclassname+"@";
+                  
   const hasApp = !!bootstrapModule.isApplication;
   const data = {
     "HTTP_DEFAULT_ROUTE":defaultRoute,
@@ -164,15 +181,14 @@ function start()
   const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
   const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
   const runConfig = require( path.join(project_config.project.path, "config.js") );
-
   const config = {
     mode:"development",
     devtool:"(none)",
     entry:entryMap,
     output: {
       path:path.resolve( webroot_path ),
-      filename:js_path+'/[name].js',
-      chunkFilename:js_path+'/[name].js',
+      filename:`${js_path}/[name].js`,
+      chunkFilename:`${js_path}/[name].js`,
       publicPath:"/",
     },
     resolve:{
@@ -215,6 +231,9 @@ function start()
               loader:es.loader,
               options:{
                 mode:"development",
+                bootstrap:(config,modules)=>{
+                  return createBootstrap(project_config, modules)
+                },
                 es_project_config:project_config,
                 styleLoader:[
                   'style-loader',
@@ -327,24 +346,42 @@ function start()
         const port = runConfig.development.port || 80;
         server.listen( port , host, () => {
             console.log(`dev server listening on ${host}:${port}`);
-            const serverBootFile = path.join(webroot_path,"index.js");
-            const createRouter = require( serverBootFile );
-            createRouter( (method,route,callback)=>{
+            const serverIndexFile = path.join(webroot_path,"index.js");
+            const serverBootFile  = path.join(project_config.build.child.bootstrap.path,"index.js");
+            const start = ()=>{
+                const createRouter = require( serverIndexFile );
+                createRouter( (method,route,callback)=>{
+                  server.app[method](route,callback);
+                },(req,res,name,error)=>{
+                    var content = stats.compilation.assets[ name ] ? stats.compilation.assets[ name ].source() : "";
+                    var status = 200;
+                    if( error )
+                    {
+                      status=500;
+                      content = error.message;
+                    }
+                    res.status( status );
+                    res.send( content );
+                });
+            }
+            watch.start({files:project_config.build.child.application.path, match:/\.(js|json)/i },(filename, stats )=>{
 
-              server.app[method](route,callback);
+               if( stats )
+               {
+                  delete require.cache[ require.resolve( filename ) ];
+                  if( require.resolve( filename ) === serverBootFile )
+                  {
+                      delete require.cache[ require.resolve( serverIndexFile ) ];
+                      start();
+                  }
 
-            },(req,res,name,error)=>{
-                var content = stats.compilation.assets[ name ] ? stats.compilation.assets[ name ].source() : "";
-                var status = 200;
-                if( error )
-                {
-                  status=500;
-                  content = error.message;
-                }
-                res.status( status );
-                res.send( content );
-                res.end();
+               }else
+               {
+                   console.log(`"${filename}" deleted.` );
+               }
+
             });
+            start();
         });
     
         process.on("SIGINT", ()=>{
