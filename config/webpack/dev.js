@@ -80,8 +80,10 @@ function createBootstrap( config, modules )
                       var callback = item[2];
                       if( !callback.call(item, item[1], module) )
                       {
-                          hotUpdateMap[updateClass].push( item );
-                      };
+                         hotUpdateMap[updateClass].push( item );
+                      }else{
+                         e.preventDefault();
+                      }
                   }
               }
         };
