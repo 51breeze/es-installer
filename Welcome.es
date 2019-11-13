@@ -3,13 +3,21 @@ package
    import es.core.Application;
    import es.core.View;
    import es.core.Display;
+   import view.WelcomeView;
 
-   [Router(default=home)]
+   [Router(default=index)]
    public class Welcome extends Application 
    {
        public function Welcome()
        {
            super();
+       }
+
+       [Router(method="get")]
+       public index()
+       {
+           var view:WelcomeView = new WelcomeView( this );
+           this.render( view );
        }
 
        public function home()

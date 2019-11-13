@@ -165,8 +165,10 @@ function start()
     hasInitConfig = false;
     if( typeof fs.copyFileSync === "function" ){
         fs.copyFileSync( INSTALL_WELCOME_PATH, path.join(project_config.project.child.src.path,"Welcome.es") );
+        fs.copyFileSync( path.join( path.dirname(INSTALL_WELCOME_PATH), "WelcomeView.html" ) , path.join(project_config.project.child.src.path,"WelcomeView.html") );
     }else{
         fs.createReadStream(INSTALL_WELCOME_PATH).pipe( fs.createWriteStream( path.join(project_config.project.child.src.path,"Welcome.es") ) );
+        fs.createReadStream(  path.join( path.dirname(INSTALL_WELCOME_PATH), "WelcomeView.html" )  ).pipe( fs.createWriteStream( path.join(project_config.project.child.src.path,"WelcomeView.html") ) );
     } 
   }
 
