@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require('path');
-function clean( dir )
+function clean( dir , level )
 {
    if( fs.existsSync(dir) && fs.statSync( dir ).isDirectory() )
    {
@@ -9,8 +9,11 @@ function clean( dir )
           const stat = fs.statSync(file);
           if( stat.isDirectory() )
           {
-              clean( file );
-              fs.rmdirSync( file );
+              clean( file, level+1 );
+              if( level > 1 ){
+                  fs.rmdirSync( file );
+              }
+              
           }else{
               fs.unlinkSync( file );
           }
@@ -20,7 +23,7 @@ function clean( dir )
 
 module.exports={
     before:( project_config )=>{
-        clean( project_config.build.path );
+        clean( project_config.build.path, 0 );
     },
     after:( project_config )=>{
         //todo zip files
