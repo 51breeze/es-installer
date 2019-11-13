@@ -3,7 +3,7 @@ package
    import es.core.Application;
    import es.core.View;
    import es.core.Display;
-   import view.WelcomeView;
+   import WelcomeView;
 
    [Router(default=index)]
    public class Welcome extends Application 
