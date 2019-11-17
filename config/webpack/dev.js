@@ -317,20 +317,25 @@ function start()
         cacheGroups: {
           vendors: {
             test: /[\\/]node_modules[\\/]/,
-            priority: -10,
-            name:"vendor"
+            priority: -20,
+            name:"system"
+          },
+          core: {
+            test: /[\\/]easescript[\\/]es[\\/]/,
+            priority:-10,
+            name:"core"
           },
           default: {
             minChunks: 2,
-            priority: -20,
+            priority: -30,
             reuseExistingChunk: true,
             name:"common"
           }
         }
       },
-      runtimeChunk: {
-        name: 'runtime'
-      }
+      // runtimeChunk: {
+      //   name: 'runtime'
+      // }
     };
   }
 

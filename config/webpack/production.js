@@ -6,6 +6,7 @@ const easescript_root = path.dirname( path.dirname(require.resolve("easescript")
 const es = require("easescript");
 const builder = require("easescript/javascript/builder");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const optimizeCssAssetsWebpackPlugin = require("optimize-css-assets-webpack-plugin");
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
 const Task = require('./task.js');
@@ -174,8 +175,8 @@ function start()
     entry:entryMap,
     output: {
       path:path.resolve( webroot_path ),
-      filename:js_path+'/[name].[contenthash].js',
-      chunkFilename:js_path+'/[name].[contenthash].js',
+      filename:js_path+'/[name].[chunkhash:4].js',
+      chunkFilename:js_path+'/[name].[chunkhash:4].js',
       publicPath:"/",
     },
     resolve:{
@@ -265,9 +266,10 @@ function start()
     },
     plugins: [
        new MiniCssExtractPlugin({
-         filename:css_path+"/[name].[contenthash].css",
-         chunkFilename:css_path+"/[name].[contenthash].css",
+         filename:css_path+"/[name].[chunkhash:4].css",
+         chunkFilename:css_path+"/[name].[chunkhash:4].css",
        }),
+       new optimizeCssAssetsWebpackPlugin(),
        new htmlWebpackPlugin({
         "template": path.join(project_config.project.path,"index.html"),
        })
@@ -290,20 +292,25 @@ function start()
         cacheGroups: {
           vendors: {
             test: /[\\/]node_modules[\\/]/,
-            priority: -10,
-            name:"vendor"
+            priority: -20,
+            name:"system"
+          },
+          core: {
+            test: /[\\/]easescript[\\/]es[\\/]/,
+            priority:-10,
+            name:"core"
           },
           default: {
             minChunks: 2,
-            priority: -20,
+            priority: -30,
             reuseExistingChunk: true,
             name:"common"
           }
         }
       },
-      runtimeChunk: {
-        name: 'runtime'
-      }
+      // runtimeChunk: {
+      //   name: 'runtime'
+      // }
     };
   }
 
