@@ -188,6 +188,7 @@ function start()
   const config = {
     mode:"development",
     devtool:"(none)",
+    target:"web",
     entry:entryMap,
     output: {
       path:path.resolve( webroot_path ),
@@ -339,8 +340,10 @@ function start()
     };
   }
 
+
+
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
-  var compiler = webpack( config );
+  var compiler = webpack( [config] );
   const server = new webpackDevServer(compiler, config.devServer);
   
   var buildDone = false;

@@ -11,7 +11,7 @@ const package={
     "description": "Test",
     "scripts": {
         "version": "node ./node_modules/easescript/bin/es.js -V",
-        "init": "node ./node_modules/easescript/bin/es.js --init -m test {-p} {-o} {-b} {-c} {--sps} {--chunk} {--pack} {--other}",
+        "init": "node ./node_modules/easescript/bin/es.js --init -m production {-p} {-o} {-b} {-c} {--sps} {--chunk} {--pack} {--other}",
         "start": "node {--start}",
         "build": "node {--build}"
     },
@@ -23,9 +23,6 @@ const package={
 
 const webpackDeps ={
     "dependencies": {
-        "@babel/core": "^7.0.0",
-        "babel": "^6.23.0",
-        "babel-preset-es2015": "^6.24.1",
     },
     "devDependencies": {
         "less": "^2.7.3",
