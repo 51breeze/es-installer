@@ -104,6 +104,7 @@ function createBootstrap( config, modules )
   }
 
   var content = fs.readFileSync( path.join(__dirname,"bootstrap.js") ).toString();
+  data["LAZY_LOAD_MAP"] = "{}";
   if( INSTALL_OPTIONS.chunk )
   {
     data["LAZY_LOAD_MAP"] = "{"+modules.map( module=>{
