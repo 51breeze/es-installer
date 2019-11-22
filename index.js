@@ -18,6 +18,7 @@ const package={
     "devDependencies":{
       "easescript":"^1.2.0",
       "libxmljs": "^0.18.6",
+      "less": "^3.10.3",
     }
 }
 
@@ -93,6 +94,32 @@ const cmd = {
 }
 
 const types = ['init','build','start'];
+
+function replaceOption(config, content )
+{
+    return content.toString().replace(/\/\*\[(\w+)\]\*\//g,function(a,b){
+        switch( b )
+        {
+            case "INSTALL_OPTIONS":
+                const options = {
+                    chunk:config.chunk,
+                    config:config.config_path,
+                    project:config.project_path.replace(/\\/g,'/'),
+                    build:config.build_path.replace(/\\/g,'/'),
+                };
+                return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
+            case "INSTALL_WELCOME_PATH":
+                return `const INSTALL_WELCOME_PATH="${PATH.resolve(root,"./Welcome.es").replace(/\\/g,'/')}";`;
+            case "SERVER_HOST":
+                const host = config.host.split(":");
+                return `const SERVER_HOST = "${host[0]}";`;
+            case "SERVER_PORT": 
+                const port = config.host.split(":");
+                return `const SERVER_PORT = ${port[1]||80};`;
+        }
+        return "";
+    });
+}
 
 //创建工程配置
 function create(config)
@@ -174,50 +201,30 @@ function create(config)
         packageinfo.author = config.author;
     }
 
+    const bin = PATH.join(config.project_path,"bin");
+    if( !fs.existsSync(bin) )
+    {
+        Utils.mkdir( bin );
+    }
+
     if( config.use_webpack )
     {
-        const bin = PATH.join(config.project_path,"bin");
-        if( !fs.existsSync(bin) )
-        {
-            Utils.mkdir( bin );
-        }
-
-        function replaceOption( content )
-        {
-            return content.toString().replace(/\/\*\[(\w+)\]\*\//g,function(a,b){
-                switch( b )
-                {
-                    case "INSTALL_OPTIONS":
-                        const options = {
-                            chunk:config.chunk,
-                            config:config.config_path,
-                            project:config.project_path.replace(/\\/g,'/'),
-                            build:config.build_path.replace(/\\/g,'/'),
-                        };
-                        return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
-                    case "INSTALL_WELCOME_PATH":
-                        return `const INSTALL_WELCOME_PATH="${PATH.resolve(root,"./Welcome.es").replace(/\\/g,'/')}";`;
-                    case "SERVER_HOST":
-                        const host = config.host.split(":");
-                        return `const SERVER_HOST = "${host[0]}";`;
-                    case "SERVER_PORT": 
-                        const port = config.host.split(":");
-                        return `const SERVER_PORT = ${port[1]||80};`;
-                }
-                return "";
-            });
-        }
-
-        fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption( fs.readFileSync( PATH.resolve(root,"./config/webpack/dev.js") ) ) )
-        fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption( fs.readFileSync( PATH.resolve(root,"./config/webpack/production.js") ) ) )
-        fs.writeFileSync( PATH.join(config.project_path,"config.js"), replaceOption( fs.readFileSync( PATH.resolve(root,"./config.js") ) ) )
+        fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption(config, fs.readFileSync( PATH.resolve(root,"./config/webpack/dev.js") ) ) )
+        fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption(config, fs.readFileSync( PATH.resolve(root,"./config/webpack/production.js") ) ) )
+        fs.writeFileSync( PATH.join(config.project_path,"config.js"), replaceOption(config, fs.readFileSync( PATH.resolve(root,"./config.js") ) ) )
 
         Utils.copyfile( PATH.resolve(root,"./config/webpack/bootstrap.js"), PATH.join(bin,"bootstrap.js") );
-        Utils.copyfile( PATH.resolve(root,"./task.js"), PATH.join(bin,"task.js") );
         Utils.copyfile( PATH.resolve(root,"./index.html"), PATH.join(config.project_path,"index.html") );
        
         packageinfo = extend(true,packageinfo,webpackDeps);
+
+    }else
+    {
+        fs.writeFileSync( PATH.join(bin,"start.js"),  replaceOption(config, fs.readFileSync( PATH.resolve(root,"./config/dev.js") ) ) )
+        fs.writeFileSync( PATH.join(bin,"build.js"),  replaceOption(config, fs.readFileSync( PATH.resolve(root,"./config/production.js") ) ) )
     }
+
+    Utils.copyfile( PATH.resolve(root,"./task.js"), PATH.join(bin,"task.js") );
 
     //config
     fs.writeFileSync( PATH.join(config.project_path, "package.json"), configToJson( packageinfo , 1 ) );

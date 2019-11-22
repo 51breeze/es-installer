@@ -30,7 +30,7 @@ function findConfigPath( dir )
 
 function createBootstrap( config, modules )
 {
-  var router = builder.routerListToJsonString( es.compilation.getServiceRoutes( modules ) );
+  var router = builder.routerListToJsonString( es.compile.getServiceRoutes( modules ) );
   const bootstrapModule = modules.filter( module=>!!module.isDefaultBootstrapModule )[0] || modules[0];
   const defaultRoute = bootstrapModule.defineMetaTypeList && bootstrapModule.defineMetaTypeList.Router ? 
                   bootstrapModule.defineMetaTypeList.Router.param.provider : bootstrapModule.fullclassname+"@";
@@ -87,6 +87,7 @@ function createBootstrap( config, modules )
   }
 
   var content = fs.readFileSync( path.join(__dirname,"bootstrap.js") ).toString();
+  data["LAZY_LOAD_MAP"] = "{}";
   if( INSTALL_OPTIONS.chunk )
   {
     data["LAZY_LOAD_MAP"] = "{"+modules.map( module=>{

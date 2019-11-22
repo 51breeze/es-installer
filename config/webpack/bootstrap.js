@@ -75,6 +75,32 @@ function match(routes, pathName )
     return null;
 }
 
+function start( module , method, callback )
+{
+    if( typeof callback === "function" )
+    {
+        callback( module );
+
+    }else
+    {
+        var obj = new module();
+        obj.dispatchEvent( new Event(Event.INITIALIZING) );
+        if( method )
+        {
+            if( typeof obj[method] === "function" )
+            {
+                obj[method]();
+            }else{
+                throw new ReferenceError( method+" is not exist.");
+            }
+        }
+        if( obj.hasEventListener(Event.INITIALIZE_COMPLETED) )
+        {
+            obj.dispatchEvent(new Event(Event.INITIALIZE_COMPLETED));
+        }
+    }
+}
+
 var global = System.getGlobalEvent();
 global.addEventListener(Event.READY,function (e) {
 
@@ -118,30 +144,17 @@ global.addEventListener(Event.READY,function (e) {
 
         (env.HTTP_DISPATCHER=function(classname, method, callback)
         {
-            lazyLoadMap[ classname ](function( module ){
-                if( typeof callback === "function" )
-                {
-                    callback( module );
+            if( lazyLoadMap.hasOwnProperty(classname) )
+            {
+                lazyLoadMap[ classname ]( function(module){
+                    start(module,method,callback);
+                });
 
-                }else
-                {
-                    var obj = new module();
-                    obj.dispatchEvent( new Event(Event.INITIALIZING) );
-                    if( method )
-                    {
-                        if( typeof obj[method] === "function" )
-                        {
-                            obj[method]();
-                        }else{
-                            throw new ReferenceError( method+" is not exist.");
-                        }
-                    }
-                    if( obj.hasEventListener(Event.INITIALIZE_COMPLETED) )
-                    {
-                        obj.dispatchEvent(new Event(Event.INITIALIZE_COMPLETED));
-                    }
-                }
-            });
+            }else
+            {
+                start( Internal.getClassModule(classname) ,method, callback);
+            }
+
         })(module, method);
 
     }else if( global.dispatchEvent( new Event("ROUTE_NOT_EXISTS") ) )

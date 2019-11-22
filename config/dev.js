@@ -1,0 +1,113 @@
+process.env.NODE_ENV="development";
+const path = require("path");
+const fs = require("fs");
+const es = require("easescript");
+const builder = require("easescript/javascript/builder");
+const watch = require("easescript/lib/watch");
+const {spawn} = require('child_process');
+const Task = require('./task.js');
+
+/*[INSTALL_OPTIONS]*/
+/*[INSTALL_WELCOME_PATH]*/
+
+function findConfigPath( dir )
+{
+  while( fs.lstatSync( dir ).isDirectory() && path.parse(dir).name )
+  {
+      var file = path.resolve( dir,'.esconfig');
+      if( fs.existsSync( file ) )
+      {
+          return file;
+      }
+      dir = path.dirname( dir );
+  }
+  return null;
+}
+
+var initConfig = false;
+var hasInitConfig = false;
+
+function start()
+{
+  var config_path = findConfigPath( process.cwd() );
+  if( !config_path && !initConfig )
+  {
+    initConfig = true;
+    hasInitConfig = true;
+    spawn(process.platform === "win32" ? "npm.cmd" : "npm" , ['run','init'], {cwd:process.cwd(),stdio: 'inherit'}).on("close",start);
+    return;
+  }
+
+  if( !fs.existsSync(config_path) )
+  {
+     throw new Error("Not found project config file.");
+  }
+
+  const project_config =  es.createConfigure( JSON.parse( fs.readFileSync( config_path ) ) );
+  project_config.minify = false;
+  project_config.module_suffix = ".js";
+
+  if( hasInitConfig )
+  {
+      hasInitConfig = false;
+      if( typeof fs.copyFileSync === "function" ){
+          fs.copyFileSync( INSTALL_WELCOME_PATH, path.join(project_config.project.child.src.path,"Welcome.es") );
+          fs.copyFileSync( path.join( path.dirname(INSTALL_WELCOME_PATH), "WelcomeView.html" ) , path.join(project_config.project.child.src.path,"WelcomeView.html") );
+      }else{
+          fs.createReadStream(INSTALL_WELCOME_PATH).pipe( fs.createWriteStream( path.join(project_config.project.child.src.path,"Welcome.es") ) );
+          fs.createReadStream(  path.join( path.dirname(INSTALL_WELCOME_PATH), "WelcomeView.html" )  ).pipe( fs.createWriteStream( path.join(project_config.project.child.src.path,"WelcomeView.html") ) );
+      }
+  }
+
+  Task.before( project_config );
+  es.build( project_config, function(results, error){
+
+      if( !error )
+      {
+        const rebuild = (filename)=>{
+
+            es.completion( project_config, filename );
+            es.build(project_config, ( results, error )=>{
+
+                if( error ){
+                    console.log( error );
+                }else
+                {
+                    results.client.forEach( result=>{
+                        result.dependencies.forEach(function(module)
+                        {
+                            if( module.filename )
+                            {
+                                watch.start( module.filename, rebuild );
+                            }
+                        });
+                    });
+                }
+
+            });
+        }
+    
+        results.client.forEach( result=>{
+            watch.start( result.module.filename, rebuild );
+            result.dependencies.forEach(function(module)
+            {
+                if( module.filename )
+                {
+                    watch.start( module.filename, rebuild );
+                }
+            });
+        });
+
+      }else
+      {
+        console.log( error );
+      }
+
+      Task.after( project_config );
+  });
+
+}
+
+start();
+
+

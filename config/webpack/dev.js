@@ -44,7 +44,7 @@ function createBootstrap( config, modules )
       default_bootstrap_class = bootstrap_class;
   }
 
-  var router = builder.routerListToJsonString( es.compilation.getServiceRoutes( modules ) );
+  var router = builder.routerListToJsonString( es.compile.getServiceRoutes( modules ) );
   const bootstrapModule = modules.filter( module=> module.fullclassname === bootstrap_class )[0];
   const defaultRoute = bootstrapModule.defineMetaTypeList && bootstrapModule.defineMetaTypeList.Router ? 
                   bootstrapModule.defineMetaTypeList.Router.param.provider : bootstrapModule.fullclassname+"@";
@@ -114,6 +114,7 @@ function createBootstrap( config, modules )
                 });
           }`;
     }).join(",")+"}";
+
   }
 
   content = content.replace(/\[CODE\[(.*?)\]\]/ig, function (a, b) {
@@ -344,7 +345,7 @@ function start()
 
 
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
-  var compiler = webpack( [config] );
+  var compiler = webpack( config );
   const server = new webpackDevServer(compiler, config.devServer);
   
   var buildDone = false;
