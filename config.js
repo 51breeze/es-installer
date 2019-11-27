@@ -17,7 +17,7 @@ if( process.env.NODE_ENV==="development" )
                 master:true
             }*/
         ],
-        cache:[],
+        redis:[],
         proxy:{}
     }
 
@@ -27,7 +27,7 @@ if( process.env.NODE_ENV==="development" )
         host:SERVER_HOST,
         port:SERVER_PORT,
         database:[],
-        cache:[],
+        redis:[],
         proxy:{}
     }
 }

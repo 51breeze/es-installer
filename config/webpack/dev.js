@@ -5,7 +5,6 @@ const webpack = require("webpack");
 const easescript_root = path.dirname( path.dirname(require.resolve("easescript") ) );
 const es = require("easescript");
 const builder = require("easescript/javascript/builder");
-const watch = require("easescript/lib/watch");
 const webpackDevServer = require('webpack-dev-server');
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
@@ -342,8 +341,6 @@ function start()
     };
   }
 
-
-
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
   var compiler = webpack( config );
   const server = new webpackDevServer(compiler, config.devServer);
@@ -360,45 +357,7 @@ function start()
         const port = runConfig.development.port || 80;
         server.listen( port , host, () => {
             console.log(`dev server listening on ${host}:${port}`);
-            const serverIndexFile = path.join(webroot_path,"index.js");
-            const serverBootFile  = path.join(project_config.build.child.bootstrap.path,"index.js");
-            if( fs.existsSync(serverIndexFile)  )
-            {
-              const start = ()=>{
-                  const createRouter = require( serverIndexFile );
-                  createRouter( (method,route,callback)=>{
-                    server.app[method](route,callback);
-                  },(req,res,name,error)=>{
-                      var content = stats.compilation.assets[ name ] ? stats.compilation.assets[ name ].source() : "";
-                      var status = 200;
-                      if( error )
-                      {
-                        status=500;
-                        content = error.message;
-                      }
-                      res.status( status );
-                      res.send( content );
-                  });
-              }
-              watch.start({files:project_config.build.child.application.path, match:/\.(js|json)/i },(filename, stats )=>{
-
-                if( stats )
-                {
-                    delete require.cache[ require.resolve( filename ) ];
-                    if( require.resolve( filename ) === serverBootFile )
-                    {
-                        delete require.cache[ require.resolve( serverIndexFile ) ];
-                        start();
-                    }
-
-                }else
-                {
-                    console.log(`"${filename}" deleted.` );
-                }
-
-              });
-              start();
-            }
+            Task.runServer(server.app, project_config, compiler, stats);
         });
     
         process.on("SIGINT", ()=>{
@@ -407,7 +366,7 @@ function start()
           });
         });
 
-        Task.after( project_config );
+        Task.after( project_config, compiler, stats);
     }
 
   });
@@ -415,5 +374,3 @@ function start()
 }
 
 start();
-
-
