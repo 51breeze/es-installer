@@ -58,7 +58,8 @@ function createBootstrap( config, modules )
     "URL_PATH_NAME":config.static_url_path_name||"PATH",
     "HTTP_ROUTE_CONTROLLER":null,
     "COMMAND_SWITCH":config.command_switch,
-    "WORKSPACE":config.workspace.replace(/\\/g,"/"),
+    "WORKSPACE":path.relative( config.project.path, config.workspace).replace(/\\/g,"/"),
+    "PROJECT_PATH":config.project.path,
     "MODULE_SUFFIX":config.suffix,
     "HOT_UPDATA":`function(){}`
   };
@@ -160,6 +161,9 @@ function start()
         path.resolve(easescript_root,'style'),
     ]
   };
+
+  project_config.hot_replacement = true;
+  project_config.env_name = "development";
 
   if( hasInitConfig )
   {

@@ -18,6 +18,32 @@ var env=Object.merge(Internal.env,{
     "HOT_UPDATA":[CODE[HOT_UPDATA]]
 });
 
+function getModuleIdByClassname( classname )
+{
+    return './'+ env.WORKSPACE+'/'+classname.replace(/\./g,'/');
+}
+
+Internal.require=function( classname, callback )
+{
+    var mid = getModuleIdByClassname(classname);
+    var installedModules =  __webpack_require__.c;
+    if( installedModules.hasOwnProperty( mid ) )
+    {
+        return __webpack_require__( mid );
+    }
+    __webpack_require__.e( mid ).then(function(){
+        if( callback ){
+           callback(module.default || module);
+        }
+    });
+}
+
+Internal.require.has = function( classname )
+{
+    var mid = getModuleIdByClassname(classname);
+    var installedModules =  __webpack_require__.c;
+    return installedModules.hasOwnProperty( mid );
+}
 
 function match(routes, pathName )
 {
@@ -45,10 +71,36 @@ function match(routes, pathName )
                     var name = routeArr[ index ];
                     if( name.charAt(0) ==="{" && name.charAt(name.length-1) ==="}" )
                     {
-                       props.push( name.slice(1,-1) )
-                       args.push( pathArr[index] );
+                       var rule = name.slice(1,-1);
+                       if( rule.charAt(0) ===":" )
+                       {
+                            var regexp = rule.slice(1);
+                            var flags = "";
+                            var index = regexp.lastIndexOf("/");
+                            if( index > 0 )
+                            {
+                                flags  = regexp.slice( index+1 );
+                                regexp = regexp.slice(0, index);
+                            }
 
-                    }else if( name !== pathArr[index].toLowerCase() )
+                            var mathed = pathArr[index].match( new RegExp( regexp, flags) );
+                            if( mathed )
+                            {
+                                props.push( name );
+                                args.push( mathed[1] || pathArr[index] );
+
+                            }else
+                            {
+                                break;
+                            }
+
+                       }else
+                       {
+                            props.push( rule );
+                            args.push( pathArr[index] );
+                       }
+
+                    }else if( name !== pathArr[ index ].toLowerCase() )
                     {
                        break;
                     }
