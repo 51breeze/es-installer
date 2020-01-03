@@ -15,7 +15,20 @@ var env=Object.merge(Internal.env,{
     "COMMAND_SWITCH":[CODE[COMMAND_SWITCH]],
     "WORKSPACE":"[CODE[WORKSPACE]]",
     "MODULE_SUFFIX":"[CODE[MODULE_SUFFIX]]",
-    "HOT_UPDATA":[CODE[HOT_UPDATA]]
+    "HOT_UPDATA":[CODE[HOT_UPDATA]],
+    "HTTP_DISPATCHER":function(classname, method, args)
+    {
+        if( lazyLoadMap.hasOwnProperty(classname) )
+        {
+            lazyLoadMap[ classname ]( function(module){
+                start(module,method,args);
+            });
+
+        }else
+        {
+            start( Internal.getClassModule(classname) ,method, args);
+        }
+    }
 });
 
 function getModuleIdByClassname( classname )
@@ -127,11 +140,12 @@ function match(routes, pathName )
     return null;
 }
 
-function start( module , method, callback )
+function start( module , method, args )
 {
-    if( typeof callback === "function" )
+    if( typeof method === "function" )
     {
-        callback( module );
+        method( module , args);
+        return;
 
     }else
     {
@@ -141,7 +155,7 @@ function start( module , method, callback )
         {
             if( typeof obj[method] === "function" )
             {
-                obj[method]();
+                obj[method].apply(obj,args);
             }else{
                 throw new ReferenceError( method+" is not exist.");
             }
@@ -156,58 +170,33 @@ function start( module , method, callback )
 var global = System.getGlobalEvent();
 global.addEventListener(Event.READY,function (e) {
 
-    var routeMap = env.HTTP_ROUTES && env.HTTP_ROUTES.get || {};
+    var requestMethod = window["HTTP_REQUEST_METHOD"] || "get";
+    var routeMap = (env.HTTP_ROUTES && env.HTTP_ROUTES[ requestMethod.toLowerCase() ]) || {};
     var path = Locator.query( env.URL_PATH_NAME );
     if( !path )
     {
-        path = Locator.path().join("/") ;
-    }else{
-        path = path.replace(/^\/|\/$/g,'');
+        path = Locator.path().join("/");
     }
 
-    path = path.toLowerCase();
-    var matchRouter = path && match( routeMap, path );
-    var router = path ? matchRouter : {
-        provider:env.HTTP_DEFAULT_ROUTE,
-        props:[],
-        args:[]
-    };
-    var controller = router ? router.provider.split("@") : [];
-    var module = controller[0];
-    var method = controller[1];
-    env.HTTP_ROUTE_CONTROLLER=router;
+    var router = match( routeMap, path );
+    if( !router && env.HTTP_DEFAULT_ROUTE )
+    {
+        router ={
+            provider:env.HTTP_DEFAULT_ROUTE,
+            props:[],
+            args:[]
+        }
+    }
 
     if( router )
     {
-        if( matchRouter )
-        {
-            env.HTTP_ROUTE_PATH = path;
-        }else
-        {
-            Object.forEach(routeMap,function (provider, name)
-            {
-                if( provider === router )
-                {
-                    env.HTTP_ROUTE_PATH = name;
-                    return false;
-                }
-            });
-        }
-
-        (env.HTTP_DISPATCHER=function(classname, method, callback)
-        {
-            if( lazyLoadMap.hasOwnProperty(classname) )
-            {
-                lazyLoadMap[ classname ]( function(module){
-                    start(module,method,callback);
-                });
-
-            }else
-            {
-                start( Internal.getClassModule(classname) ,method, callback);
-            }
-
-        })(module, method);
+        var controller = router.provider.split("@");
+        var module = controller[0];
+        var method = controller[1];
+        env.HTTP_ROUTE=router.provider;
+        env.HTTP_PATH = path;
+        env.HTTP_PARAMS = router.args;
+        env.HTTP_DISPATCHER(module, method, router.args);
 
     }else if( global.dispatchEvent( new Event("ROUTE_NOT_EXISTS") ) )
     {

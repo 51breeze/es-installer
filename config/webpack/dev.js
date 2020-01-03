@@ -190,6 +190,9 @@ function start()
   const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
   const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
   const runConfig = require( path.join(project_config.project.path, "config.js") );
+  const host = runConfig.development.host || "localhost";
+  const port = runConfig.development.port || 80;
+
   const config = {
     mode:"development",
     devtool:"(none)",
@@ -219,7 +222,8 @@ function start()
     devServer: {
       contentBase:path.resolve( webroot_path ),
       hot:true,
-      host:'localhost',
+      host:host,
+      port:port,
       open:true,
       proxy:runConfig.development.proxy
     },
@@ -324,7 +328,7 @@ function start()
           vendors: {
             test: /[\\/]node_modules[\\/]/,
             priority: -20,
-            name:"system"
+            name:"vendor"
           },
           core: {
             test: /[\\/]easescript[\\/]es[\\/]/,
@@ -356,9 +360,6 @@ function start()
     {
         buildDone = true;
         fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig.development||{}) );
-
-        const host = runConfig.development.host || "localhost";
-        const port = runConfig.development.port || 80;
         server.listen( port , host, () => {
             console.log(`dev server listening on ${host}:${port}`);
             Task.runServer(server.app, project_config, compiler, stats);

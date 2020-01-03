@@ -76,6 +76,11 @@ module.exports={
     },
     runServer(app, project_config, compiler, stats)
     {
+        if( project_config.service_provider_syntax !== "node" )
+        {
+            return;
+        }
+        
         const index  = path.join(project_config.build.child.bootstrap.path,"index.js");
         if( fs.existsSync(index)  )
         {
