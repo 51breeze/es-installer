@@ -106,16 +106,15 @@ function replaceOption(config, content )
                     config:config.config_path,
                     project:config.project_path.replace(/\\/g,'/'),
                     build:config.build_path.replace(/\\/g,'/'),
+                    server_render:config.server_render
                 };
                 return `const INSTALL_OPTIONS=${JSON.stringify(options)};`;
             case "INSTALL_WELCOME_PATH":
                 return `const INSTALL_WELCOME_PATH="${PATH.resolve(root,"./Welcome.es").replace(/\\/g,'/')}";`;
             case "SERVER_HOST":
-                const host = config.host.split(":");
-                return `const SERVER_HOST = "${host[0]}";`;
+                return `const SERVER_HOST = "${config.host}";`;
             case "SERVER_PORT": 
-                const port = config.host.split(":");
-                return `const SERVER_PORT = ${port[1]||80};`;
+                return `const SERVER_PORT = ${config.port||80};`;
         }
         return "";
     });

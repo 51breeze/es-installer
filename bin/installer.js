@@ -76,15 +76,27 @@ const questions = [
     message: '服务端运行环境:',
     name: 'service_provider_syntax',
     choices: [
+        "none",
         "php",
         "node",
     ]
 },
 {
+    type: 'confirm',
+    message: '是否需要服务端渲染',
+    name: 'server_render'
+},
+{
     type: 'input',
     message: '服务端运行地址:',
     name: 'host',
-    default: "127.0.0.1:80",
+    default: "127.0.0.1",
+},
+{
+    type: 'input',
+    message: '服务端运行端口:',
+    name: 'port',
+    default: "80",
 },
 {
     type: 'input',
