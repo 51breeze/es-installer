@@ -44,6 +44,12 @@ function start()
   const project_config =  es.createConfigure( JSON.parse( fs.readFileSync( config_path ) ) );
   const runConfig = require( path.join(project_config.project.path, "config.js") );
 
+  if( INSTALL_OPTIONS.server_render )
+  {
+      project_config.only_current_syntax = false;
+      project_config.server_render = true;
+  }
+
   project_config.mode = 3;
   project_config.minify = true;
   project_config.build_pack = true;
@@ -63,7 +69,7 @@ function start()
 
   Task.before( project_config );
   es.build( project_config, function(results){
-     fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig.production||{}) );
+     fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig||{}) );
      Task.after( project_config );
   });
 

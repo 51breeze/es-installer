@@ -1,9 +1,9 @@
-const config  = {};
+var config  = {};
 /*[SERVER_HOST]*/
 /*[SERVER_PORT]*/
 if( process.env.NODE_ENV==="development" )
 {
-    config.development={
+    config={
         host:SERVER_HOST,
         port:SERVER_PORT,
         database:[
@@ -23,7 +23,8 @@ if( process.env.NODE_ENV==="development" )
 
 }else
 {
-    config.production={
+    //production
+    config={
         host:SERVER_HOST,
         port:SERVER_PORT,
         database:[],

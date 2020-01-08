@@ -75,10 +75,11 @@ const questions = [
     type: 'list',
     message: '服务端运行环境:',
     name: 'service_provider_syntax',
+    default: "node",
     choices: [
-        "none",
-        "php",
         "node",
+        "php",
+        "none",
     ]
 },
 {

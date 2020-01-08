@@ -5,10 +5,12 @@ const webpack = require("webpack");
 const easescript_root = path.dirname( path.dirname(require.resolve("easescript") ) );
 const es = require("easescript");
 const builder = require("easescript/javascript/builder");
+const watch = require("easescript/lib/watch");
 const webpackDevServer = require('webpack-dev-server');
 const htmlWebpackPlugin = require('html-webpack-plugin');
 const {spawn} = require('child_process');
 const Task = require('./task.js');
+const chokidar = require('chokidar');
 /*[INSTALL_OPTIONS]*/
 /*[INSTALL_WELCOME_PATH]*/
 
@@ -138,6 +140,10 @@ function createBootstrap( config, modules )
 
 var initConfig = false;
 var hasInitConfig = false;
+
+/**
+ * 开始构建服务
+ */
 function start()
 {
   var config_path = findConfigPath( process.cwd() );
@@ -177,22 +183,28 @@ function start()
     } 
   }
 
+  if( INSTALL_OPTIONS.server_render && project_config.service_provider_syntax ==="node" )
+  {
+     project_config.only_current_syntax = true;
+     project_config.server_render       = true;
+  }
+
   Task.before( project_config );
 
   const bootstrap = es.getBootstrap( project_config );
   const entryMap = {
     "index":createBootstrap(project_config, bootstrap )
   };
-  
+  const app_config_file = path.join(project_config.project.path, "config.js");
   const webroot_path = project_config.build.child.webroot.path;
   const js_path = path.relative( webroot_path, project_config.build.child.js.path  );
   const font_path = path.relative( webroot_path, project_config.build.child.font.path  );
   const img_path = path.relative( webroot_path, project_config.build.child.img.path  );
   const css_path = path.relative( webroot_path, project_config.build.child.css.path  );
-  const runConfig = require( path.join(project_config.project.path, "config.js") );
-  const host = runConfig.development.host || "localhost";
-  const port = runConfig.development.port || 80;
-
+  var runConfig = fs.existsSync(app_config_file) ? require( app_config_file ) : {};
+  const host = runConfig.host || "localhost";
+  const port = runConfig.port || 80;
+  
   const config = {
     mode:"development",
     devtool:"(none)",
@@ -225,7 +237,7 @@ function start()
       host:host,
       port:port,
       open:true,
-      proxy:runConfig.development.proxy
+      proxy:runConfig.proxy
     },
     watch:true,
     watchOptions:{
@@ -248,7 +260,7 @@ function start()
                 bootstrap:(config,modules)=>{
                   return createBootstrap(project_config, modules)
                 },
-                es_project_config:project_config,
+                es_project_config:Object.assign({},project_config),
                 styleLoader:[
                   'style-loader',
                   'css-loader'
@@ -308,14 +320,17 @@ function start()
        new htmlWebpackPlugin({
           "template": path.join(project_config.project.path,"index.html"),
        })
-    ]
+    ],
+    optimization:{
+      removeEmptyChunks:true,
+      usedExports:true
+    }
   };
 
   
   if( INSTALL_OPTIONS.chunk )
   {
-    config.optimization={
-      splitChunks: {
+      config.optimization.splitChunks={
         chunks: 'all',
         minSize: 30000,
         maxSize: 0,
@@ -342,38 +357,194 @@ function start()
             name:"common"
           }
         }
-      },
-      // runtimeChunk: {
+      };
+
+      //config.optimization.runtimeChunk={
       //   name: 'runtime'
-      // }
-    };
+      // };
   }
 
   webpackDevServer.addDevServerEntrypoints(config, config.devServer);
-  var compiler = webpack( config );
+  const compiler = webpack( config );
   const server = new webpackDevServer(compiler, config.devServer);
-  
-  var buildDone = false;
-  compiler.hooks.done.tap("devServer", (stats)=>{
-
-    if( buildDone === false )
+  const suffixs = [project_config.skin_file_suffix.slice(1), project_config.suffix.slice(1)].join("|");
+  const rebuildSuffix = new RegExp( `\\.(${suffixs})$`,"i");  
+  const done=( stats, project_config)=>{
+          
+    if( !fs.existsSync(project_config.build.child.bootstrap.path) )
     {
-        buildDone = true;
-        fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig.development||{}) );
-        server.listen( port , host, () => {
-            console.log(`dev server listening on ${host}:${port}`);
-            Task.runServer(server.app, project_config, compiler, stats);
-        });
-    
-        process.on("SIGINT", ()=>{
-          server.close( ()=>{
-              console.log('dev server disconnected.');
-          });
-        });
-
-        Task.after( project_config, compiler, stats);
+        fs.mkdirSync( project_config.build.child.bootstrap.path );
     }
 
+    fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig||{}) );
+
+    if( started === false )
+    {
+        started = true;
+        server.listen( port , host, () => {
+
+            //运行应用服务
+            Task.runServer(server.app, project_config);
+
+            //在没有匹配到服务的情况下，始终输出index.html内容
+            if( !INSTALL_OPTIONS.server_render )
+            {
+                server.app.use(function(req, res, next){
+                    var content = stats.compilation.assets[ "index.html" ] ? stats.compilation.assets[ "index.html" ].source() : null;
+                    res.status( content ? 200 : 404 );
+                    res.send( content || ("Not found "+req.path) );
+                });
+            }
+            console.log(`\nDevServer listening on ${host}:${port}\n`);
+
+        });
+    }
+
+    Task.after( project_config );
+    es.outputDoneInfo( project_config );
+  }
+
+  //监听入口文件是否有变化
+  const onChange = (filename)=>{
+
+    if( !rebuildSuffix.test(filename)  )
+    {
+        return;
+    }
+
+    const oldModules = {};
+    bootstrap.forEach( module=> {
+       oldModules[module.fullclassname]=module;
+    });
+
+    const newModules = {};
+    const modules = es.getBootstrap( project_config );
+    modules.forEach( module=> {
+       newModules[module.fullclassname]=module;
+    });
+
+    const addModules = modules.filter( module=> !oldModules[ module.fullclassname ] );
+    const delModules = bootstrap.filter( module=> !newModules[ module.fullclassname ] );
+
+    if( addModules.length > 0 || delModules.length > 0 )
+    {
+        bootstrapChanged = true;
+        bootstrap.splice.apply(bootstrap, [0, bootstrap.length].concat(modules) );
+        createBootstrap(project_config, bootstrap );
+    }
+
+  }
+
+  var watchConfig = chokidar.watch(app_config_file, {
+    ignored: /(^|[\/\\])\../,
+    persistent: true
+  });
+
+  var watchProject = chokidar.watch(project_config.project.child.src.path, {
+    ignored: /(^|[\/\\])\../,
+    persistent: true
+  });
+
+  var bootstrapChanged = true;
+  var started = false;
+  var watching = false;
+  watchProject.on("add",onChange);
+  watchProject.on("change",onChange);
+  watchProject.on("unlink",onChange);
+
+  process.on("SIGINT", ()=>{
+    server.close( ()=>{
+        console.log(`\nDevServer disconnected on ${host}:${port}\n`);
+    });
+    watchProject.close();
+    watchConfig.close();
+  });
+
+  process.on("exit", ()=>{
+      server.close( ()=>{
+          console.log(`\nDevServer disconnected on ${host}:${port}\n`);
+      });
+      watchProject.close();
+      watchConfig.close();
+  });
+
+  compiler.hooks.done.tap("devServer", (stats)=>{
+
+      if( INSTALL_OPTIONS.server_render && project_config.service_provider_syntax ==="node" )
+      {
+          if(!bootstrapChanged)
+          {
+              return;
+          }
+          bootstrapChanged = false;
+          const chunkModules = bootstrap.map( module=>module.fullclassname.replace(/\./g,'-') )
+          const namedChunks = stats.compilation.namedChunks.values();
+          const loadScripts = {};
+          var mainScripts = [];
+          var chunkScripts = {};
+          for(var chunk of namedChunks)
+          {
+              if( chunkModules.indexOf( chunk.name ) < 0  )
+              {
+                mainScripts = mainScripts.concat( chunk.files );
+              }else
+              {
+                chunkScripts[ chunk.name ] = chunk.files;
+              }
+          }
+      
+          const publicPath = stats.compilation.outputOptions.publicPath;
+          bootstrap.forEach( module=>{
+              var chunkName = module.fullclassname.replace(/\./g,'-');
+              loadScripts[ module.fullclassname ] = mainScripts;
+              if( chunkScripts[chunkName] )
+              {
+                  loadScripts[ module.fullclassname ] = mainScripts.concat( chunkScripts[chunkName] );
+              }
+        
+              if( publicPath )
+              {
+                  loadScripts[ module.fullclassname ] = loadScripts[ module.fullclassname ].map( value=>publicPath+value );
+              }
+          });
+
+          const server_config = Object.assign({}, project_config);
+          server_config.syntax = project_config.service_provider_syntax;
+          server_config.server_render_load_scripts=loadScripts;
+          const rebuildServer=(filename)=>{
+              if( rebuildSuffix.test(filename)  )
+              {
+                  es.single(server_config,filename, server_config.service_provider_syntax, true );
+              }
+          }
+
+          const buildServer = ()=>{
+              es.build( server_config, function(result,error){
+                  if( error ){
+                      console.log( error );
+                  }else{
+                      done(stats, server_config);
+                  }
+              });
+          }
+
+          if( !watching )
+          {
+              watchConfig.on("change", (filename)=>{
+                  delete require.cache[ require.resolve(filename) ];
+                  runConfig = require(filename);
+                  buildServer();
+              });
+              watchProject.on("change",rebuildServer);
+              watching = true;
+          }
+
+          buildServer();
+  
+      }else
+      {
+          done(stats, project_config);
+      }
   });
 
 }

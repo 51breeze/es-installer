@@ -19,11 +19,18 @@ const package={
       "easescript":"^1.2.0",
       "libxmljs": "^0.18.6",
       "less": "^3.10.3",
-    }
+      "chokidar": "^3.3.1",
+    },
+    "dependencies": {
+        "mysql": "^2.17.1",
+        "axios": "^0.19.0",
+    },
 }
 
 const webpackDeps ={
     "dependencies": {
+        "mysql": "^2.17.1",
+        "axios": "^0.19.0",
     },
     "devDependencies": {
         "less": "^2.7.3",
@@ -47,6 +54,7 @@ const webpackDeps ={
         "events": "^3.0.0",
         "loglevel": "^1.6.3",
         "strip-ansi": "^5.2.0",
+        "chokidar": "^3.3.1",
     }
 };
 

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require('path');
 const watch = require("easescript/lib/watch");
+const chokidar = require('chokidar');
 
 /**
  * 数据库驱动
@@ -8,25 +9,31 @@ const watch = require("easescript/lib/watch");
  */
 const drives={
     mysql( config ){
-        const Mysql= require("mysql");
-        const connection = Mysql.createConnection({
+        const mysql= require("mysql");
+        const pool = mysql.createPool({
             host     :config.host     || '127.0.0.1',
             port     :config.port     || '3306',
             user     :config.user     || 'root',
             password :config.password || '',
             database :config.dbname
         });
-        connection.connect();
-        process.on('SIGINT', () => {
-            connection.end();
-        });
-
         return ( sql, params, callback )=>{
-            connection.query(sql, function (err, rows, fields) {
-                if (err) throw err;
-                callback( rows, fields);
+            pool.getConnection(function(error, connection)
+            {
+                if( error )
+                {
+                    callback( null , error);
+
+                }else
+                {
+                    connection.query(sql,params||[],function (error, rows) {
+                        connection.release();
+                        callback( rows , error);
+                    });
+                }
+
             });
-        }
+        };
     }
 }
 
@@ -36,7 +43,7 @@ function serviceProvider(boot, config, name )
     const provider = factor ? factor( config ) : null;
     if( provider )
     {
-        boot.serviceProvider(name, (cmd, params, callback)=>{
+        boot.pipe(name, (cmd, params, callback)=>{
             provider(cmd, params, callback);
         });
 
@@ -64,77 +71,113 @@ function clean( dir , level )
               fs.unlinkSync( file );
           }
       });
-  }
+    }
 }
 
 module.exports={
     before:( project_config )=>{
-        clean( project_config.build.path, 0 );
+
+        var public  = project_config.build.child.webroot.path;
+        if( fs.existsSync(public) && fs.statSync(public).isDirectory() )
+        {
+            fs.readdirSync( public ).forEach( (name)=>{
+                if( !(name==="." || name==="..") )
+                {
+                    var pathname = path.join(public,name);
+                    if( fs.statSync( pathname ).isDirectory() )
+                    {
+                        clean(pathname, 0 );
+                    }
+                }
+            });
+        }
     },
     after:(  project_config, compiler, stats )=>{
         //todo zip files
     },
-    runServer(app, project_config, compiler, stats)
+    runServer(app, project_config)
     {
-        if( project_config.service_provider_syntax !== "node" )
+        const index  = path.join(project_config.build.child.bootstrap.path,"index.js");
+        if( project_config.service_provider_syntax !== "node" || !fs.existsSync(index) )
         {
             return;
         }
         
-        const index  = path.join(project_config.build.child.bootstrap.path,"index.js");
-        if( fs.existsSync(index)  )
-        {
-            const start = ()=>{
+        const bindRouteMap = {};
+        const start = ()=>{
 
-                //开发环境直接使用 webpack 的服务， 可以接入到生产环境的应用
-                const Bootstrap = require( index );
-                const boot = new Bootstrap( app );
-                const appConfig = boot.getConfig();
+            //开发环境直接使用 webpack 的服务， 可以接入到生产环境的应用
+            const Bootstrap = require( index );
+            const boot      = new Bootstrap( app );
+            const appConfig = boot.getConfig();
 
-                //如果需要使用数据服务，则需要先注册
-                if( appConfig )
-                {
-                    //todo more config..
-                    ["database","redis"].forEach( (name)=>{
+            //如果需要使用数据服务，则需要先注册
+            if( appConfig )
+            {
+                //todo more config..
+                ["database","redis"].forEach( (name)=>{
 
-                        var config = Array.isArray( appConfig[name] ) ? appConfig[name][0] : appConfig[name];
-                        if(config)
-                        {
-                            serviceProvider( boot, config, name);
-                        }
-                    });
-                }
-
-                //注册路由服务
-                boot.start( (method,route,callback)=>{
-                    app[method](route,callback);
-                });
-
-                //在没有匹配到服务的情况下，始终输出index.html内容
-                app.use(function(req, res, next){
-                    var content = stats.compilation.assets[ "index.html" ] ? stats.compilation.assets[ "index.html" ].source() : null;
-                    res.status( content ? 200 : 404 );
-                    res.send( content || ("Not found "+req.path) );
+                    var config = Array.isArray( appConfig[name] ) ? appConfig[name][0] : appConfig[name];
+                    if(config)
+                    {
+                        serviceProvider( boot, config, name);
+                    }
                 });
             }
 
-            //开发环境下用于监听文件变动后重新加载文件
-            watch.start({files:project_config.build.child.application.path, match:/\.(js|json)/i },(filename, stats )=>{
-
-                if( stats )
+            //注册路由服务
+            boot.bindRoute( (method,route,callback)=>{
+                if( !bindRouteMap[ route ] )
                 {
-                    delete require.cache[ require.resolve( filename ) ];
-                    start();
-
-                }else
-                {
-                    console.log(`"${filename}" deleted.` );
+                    bindRouteMap[ route ] = true;
+                    app[method](route,callback);
                 }
-
             });
-
-            start();
         }
 
+        //清除已加载的模块文件
+        const clearFileCache=( pathname )=>{
+
+            if( fs.statSync(pathname).isDirectory() )
+            {
+                fs.readdirSync( pathname ).forEach( (filename)=>{
+                    if( !(filename==="." || filename==="..") )
+                    {
+                        clearFileCache( path.join(pathname,filename) );
+                    }
+                });
+
+            }else
+            {
+                const file = require.resolve( pathname );
+                delete require.cache[ file ];
+            }
+        }
+
+        //服务端根目录
+        const rootpath = project_config.build.child.application.path;
+        const watch = chokidar.watch(rootpath, {
+            ignored: /(^|[\/\\])\../,
+            persistent: true
+        });
+
+        process.on("exit", ()=>{
+            watch.close();
+        });
+        
+        process.on('SIGINT', () => {
+            watch.close();
+        });
+
+        //开发环境下用于监听文件变动后重新加载文件
+        watch.on("change",(filename)=>{
+            if( /\.(js|json)$/i.test( filename ) )
+            {
+                clearFileCache( rootpath );
+                start();
+            }
+        });
+
+        start();
     }
 }

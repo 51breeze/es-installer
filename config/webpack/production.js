@@ -156,8 +156,13 @@ function start()
     } 
   }
 
+  if( INSTALL_OPTIONS.server_render )
+  {
+      project_config.only_current_syntax = true;
+      project_config.server_render = true;
+  }
+
   Task.before( project_config );
-  
   const bootstrap = es.getBootstrap( project_config );
   const entryMap = {
     "index":createBootstrap(project_config, bootstrap )
@@ -209,7 +214,7 @@ function start()
               loader:es.loader,
               options:{
                 mode:"production",
-                es_project_config:project_config,
+                es_project_config:Object.assign({},project_config),
                 styleLoader:[
                   MiniCssExtractPlugin.loader.replace(/\\/g,'/'),
                   'css-loader'
@@ -274,14 +279,16 @@ function start()
        new htmlWebpackPlugin({
         "template": path.join(project_config.project.path,"index.html"),
        })
-    ]
-    
+    ],
+    optimization:{
+      removeEmptyChunks:true,
+      usedExports:true
+    }
   };
 
   if( INSTALL_OPTIONS.chunk )
   {
-    config.optimization={
-      splitChunks: {
+      config.optimization.splitChunks={
         chunks: 'all',
         minSize: 30000,
         maxSize: 0,
@@ -294,7 +301,7 @@ function start()
           vendors: {
             test: /[\\/]node_modules[\\/]/,
             priority: -20,
-            name:"system"
+            name:"vendor"
           },
           core: {
             test: /[\\/]easescript[\\/]es[\\/]/,
@@ -308,18 +315,77 @@ function start()
             name:"common"
           }
         }
-      },
-      // runtimeChunk: {
+      };
+
+      //config.optimization.runtimeChunk={
       //   name: 'runtime'
-      // }
-    };
+      // };
   }
 
   var compiler = webpack( config );
-  compiler.run(function(){
-    fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig.production||{}) );
-    Task.after( project_config );
-    console.log( "build completed!" );
+  compiler.run(function(error,stats){
+       
+    const done=()=>{
+        
+        if( !fs.existsSync(project_config.build.child.bootstrap.path) )
+        {
+            fs.mkdirSync( project_config.build.child.bootstrap.path );
+        }
+
+        fs.writeFileSync( path.join(project_config.build.child.bootstrap.path,"config.json"), JSON.stringify(runConfig||{}) );
+        Task.after( project_config );
+        es.outputDoneInfo( project_config );
+    }
+
+    if( INSTALL_OPTIONS.server_render )
+    {
+        const chunkModules = bootstrap.map( module=>module.fullclassname.replace(/\./g,'-') )
+        const namedChunks = stats.compilation.namedChunks.values();
+        const loadScripts = {};
+        var mainScripts = [];
+        var chunkScripts = {};
+        for(var chunk of namedChunks)
+        {
+            if( chunkModules.indexOf( chunk.name ) < 0  )
+            {
+              mainScripts = mainScripts.concat( chunk.files );
+            }else
+            {
+              chunkScripts[ chunk.name ] = chunk.files;
+            } 
+        }
+    
+        const publicPath = stats.compilation.outputOptions.publicPath;
+        bootstrap.forEach( module=>{
+          var chunkName = module.fullclassname.replace(/\./g,'-');
+          loadScripts[ module.fullclassname ] = mainScripts;
+          if( chunkScripts[chunkName] )
+          {
+              loadScripts[ module.fullclassname ] = mainScripts.concat( chunkScripts[chunkName] );
+          }
+    
+          if( publicPath )
+          {
+              loadScripts[ module.fullclassname ] = loadScripts[ module.fullclassname ].map( value=>publicPath+value );
+          }
+        });
+        
+        const server_config = Object.assign({}, project_config);
+        server_config.syntax = project_config.service_provider_syntax;
+        server_config.server_render_load_scripts=loadScripts;
+        es.build( server_config, function(result,error){
+            if( error ){
+                console.log( error );
+            }else{
+                done();
+            }
+        });
+
+    }else
+    {
+        done();
+    }
+
   });
 
 }
