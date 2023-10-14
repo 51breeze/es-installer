@@ -1,0 +1,12 @@
+{
+	"pages": [
+
+		{
+			"path": "pages/Test",
+			"style": {
+				"navigationBarTitleText": "Es Test"
+			}
+		}
+
+	]
+}
