@@ -1,18 +1,17 @@
 {
   "name": "es-installer",
   "version": "1.0.14",
-  "description": "Create a easescript application program.",
+  "description": "Create Development Framework For EaseScript",
   "main": "./lib/index.js",
   "bin": {
-    "ei": "./lib/index.js",
-    "ces": "./lib/index.js"
+    "esi": "./lib/index.js"
   },
   "scripts": {
     "dev": "node ./lib/index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/51breeze/easescript-installer.git"
+    "url": "git+https://github.com/51breeze/es-installer.git"
   },
   "keywords": [
     "easescript installer"
@@ -20,10 +19,11 @@
   "author": "Jun Ye",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/51breeze/easescript-installer/issues"
+    "url": "https://github.com/51breeze/es-installer/issues"
   },
-  "homepage": "https://github.com/51breeze/easescript-installer#readme",
+  "homepage": "https://github.com/51breeze/es-installer#readme",
   "dependencies": {
+    "commander": "~2.11.0",
     "chalk": "^4.0.0",
     "extend": ">=2.0.2",
     "inquirer": "^6.2.2"
