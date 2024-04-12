@@ -1,6 +1,9 @@
-package views;
+package pages;
 
 import web.components.Component
+import web.Lang;
+import stores.UserStore;
+
 
 class Home extends Component{
 
@@ -36,8 +39,18 @@ class Home extends Component{
 
       @Override
       onMounted(){
-        
-      }
+            //使用store;
+           const userStore = UserStore.use();
+           console.log(`获取用户登录信息:  ${userStore.fetch()}`)
+
+            //获取Home.es 里配置的start
+            const start = Lang.fetch('home.start')
+            console.log(`获取Home.es 里配置的start语言:  ${start}`)
+
+            //获取common.env 里配置的host.  优先级最低只有在其它配置文件中没有定义时才会返回这里的值
+            const host = Lang.fetch('host')
+            console.log(`获取common.env 里配置的host:  ${host}`)
+      }     
 
       @Override
       render(){

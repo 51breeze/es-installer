@@ -5,7 +5,7 @@ import web.components.Viewport;
 import web.components.Component;
 import web.components.Link;
 import web.Application;
-import views.Home;
+import pages.Home;
 
 class App extends Application{
 
@@ -39,6 +39,10 @@ class App extends Application{
 
     @Override
     get routes(){
+        //获取自动生成的路由
+        super.routes();
+
+        //自定义路由
         return [
             {
                 path:"/home",
@@ -51,7 +55,7 @@ class App extends Application{
                 name:'List',
                 meta:{title:"List"},
                 component(){
-                    return import( './views/List.es' );
+                    return import( './pages/List.es' );
                 }
             }
         ]
