@@ -40,7 +40,7 @@ class App extends Application{
     @Override
     get routes(){
         //获取自动生成的路由
-        super.routes();
+        super.routes;
 
         //自定义路由
         return [
