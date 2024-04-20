@@ -7,9 +7,7 @@ class UserStore extends Store{
     userinfo = {name:'sss'};
 
     isLogin = false;
-
-    isLoginssss = false;
-
+    
     persson = null;
 
     protected add = "default add property";
