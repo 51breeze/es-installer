@@ -9,8 +9,7 @@ class Index extends Page{
     @Override
     protected render(){
         return <div>
-            <div>members/Index</div>
-            <Viewport />
+            <div>Page content: members/Index</div>
         </div>
     }
 

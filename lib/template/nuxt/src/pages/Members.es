@@ -12,7 +12,7 @@ class Members extends Page{
     protected render(){
         
         return <div>
-            <div>members</div>
+            <div>Children Route</div>
             <Viewport />
         </div>
     }

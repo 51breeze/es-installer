@@ -8,18 +8,12 @@ class UserStore extends Store{
 
     isLogin = false;
 
-    isLoginssss = false;
-
-    persson = null;
-
-    protected add = "default add property";
-
     set info( value ){
         this.persson = value;
     }
 
     get addName(){
-        return this.add;
+        return userinfo.add;
     }
 
     fetch(){
