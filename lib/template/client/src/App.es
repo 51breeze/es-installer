@@ -9,6 +9,7 @@ class App extends Application{
     @main
     static main(){
         when( Env(NODE_ENV, development) ){
+            //设置开发模式时与服务端请求的代理前缀
             System.setConfig('http.request.config.baseURL', '/api');
         }
         const obj = new App();
