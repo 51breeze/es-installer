@@ -1,13 +1,13 @@
 package pages;
 
-import web.components.Component
+import web.components.Page
 
 import logo from 'assets/logo.png';
 
 import web.Lang
 
 @Router('/')
-class Home extends Component{
+class Home extends Page{
 
 	switchLang(value){
 		if(Lang.getLocale() !== value){
