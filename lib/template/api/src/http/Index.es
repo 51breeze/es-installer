@@ -1,8 +1,6 @@
 package api.http;
 
-import server.kernel.Controller;
-
-class Index extends Controller{
+class Index{
 
       @Get('/')
       public hello(){

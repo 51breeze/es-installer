@@ -1,15 +1,9 @@
-package app.controller;
+package http
 
-import server.kernel.Controller;
 import app.model.User;
 
-import "../../assets/main.js";
-import "../../assets/style.css";
 
-class Index extends Controller{
-
-      @Embed('../../assets/less/index.less')
-      file:string;
+class Index{
 
       @Get('/')
       public hello(){
