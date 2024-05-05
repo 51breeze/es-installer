@@ -3,9 +3,7 @@ package model;
 import server.model.Model;
 
 import table.User as UserStruct;
-import app.model.Address 
-
-import server.database.concern.BaseQuery;
+import model.Address 
 
 class User extends Model<User> implements UserStruct {
 

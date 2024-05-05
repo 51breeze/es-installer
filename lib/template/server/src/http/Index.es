@@ -1,6 +1,6 @@
 package http
 
-import app.model.User;
+import model.User;
 
 
 class Index{
