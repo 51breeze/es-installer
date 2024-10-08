@@ -1,6 +1,6 @@
 {
   "name": "es-installer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Create Development Framework For EaseScript",
   "main": "./lib/index.js",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "node ./lib/index.js",
+    "install": "node ./bin/esi.js --install es-thinkphp",
     "mysql": "node ./lib/scripts/mysql.js",
     "php": "node ./lib/scripts/php.js"
   },
