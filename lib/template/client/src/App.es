@@ -15,24 +15,7 @@ class App extends Application{
         const obj = new App();
         obj.mount(document.getElementById('app'));
     }
-
-    private _router:Router=null;
-
-    @Override
-    get router(){
-        if(_router)return _router;
-        return _router = new Router({
-            mode:'hash',
-            routes:this.routes
-        });
-    }
-
-    @Override
-    get routes(){
-        //获取自动生成的路由
-        return super.routes;
-    }
-
+    
     @Override
     render(){
         return <Viewport />
